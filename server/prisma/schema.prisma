@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum FlagStatus {
+  NEW
+  RESOLVED
+}
+
+enum AttemptMode {
+  TIMED
+  PRACTICE
+  TEST
+}
+
+model University {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  shortName String?
+  createdAt DateTime  @default(now())
+  programs  Program[]
+}
+
+model Program {
+  id           String       @id @default(cuid())
+  universityId String
+  code         String?
+  name         String
+  school       String?
+  order        Int          @default(0)
+  createdAt    DateTime     @default(now())
+
+  university University     @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  exams      Exam[]
+  students   User[]
+  notifications Notification[]
+
+  @@index([universityId])
+}
+
+model Exam {
+  id        String   @id @default(cuid())
+  programId String
+  code      String   @unique
+  title     String
+  source    String?
+  year      Int
+  variant   String?
+  durationMin Int?
+  order     Int      @default(0)
+  isFree    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  program  Program       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts TestAttempt[]
+  planExams PlanExam[]
+
+  @@index([programId])
+  @@index([year])
+}
+
+model Question {
+  id           String   @id @default(cuid())
+  examId       String
+  order        Int      @default(0)
+  type         String   @default("open")
+  topic        String?
+  level        String?
+  year         Int?
+  source       String?
+  prompt       String
+  modelSolution String?
+  answer       String?
+  // TEST төрөл: сонголтууд (текст+түлхүүр) ба зөв хариултын түлхүүр салдаг хадгалагдана.
+  // correctChoice нь оюутанд тест дуустал API-ээр огт илгээгдэхгүй.
+  choices       Json?    // [{ key: "A", text: "..." }, ...] — яг 4 элемент
+  correctChoice String?  // "A" | "B" | "C" | "D"
+  points       Float    @default(1)
+  needsReview  Boolean  @default(false)
+  tags         String[] @default([])
+  createdAt    DateTime @default(now())
+
+  exam        Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  flags       Flag[]
+  bookmarks   Bookmark[]
+  attemptAnswers AttemptAnswer[]
+
+  @@index([examId])
+  @@index([topic])
+  @@index([level])
+  @@index([year])
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role      @default(STUDENT)
+  programId    String?
+  createdAt    DateTime  @default(now())
+
+  program       Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
+  flags         Flag[]
+  bookmarks     Bookmark[]
+  attempts      TestAttempt[]
+  notifications Notification[]
+  payments      PaymentTransaction[]
+
+  @@index([role])
+}
+
+model Flag {
+  id         String     @id @default(cuid())
+  questionId String
+  userId     String
+  reason     String
+  status     FlagStatus @default(NEW)
+  adminNote  String?
+  createdAt  DateTime   @default(now())
+  resolvedAt DateTime?
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([questionId])
+}
+
+model Bookmark {
+  userId     String
+  questionId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, questionId])
+}
+
+model TestAttempt {
+  id          String      @id @default(cuid())
+  userId      String
+  examId      String
+  mode        AttemptMode @default(PRACTICE)
+  format      String      @default("OPEN")  // OPEN | TEST
+  score       Float       @default(0)
+  totalPoints Float       @default(0)
+  startedAt   DateTime    @default(now())
+  finishedAt  DateTime?
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam    Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers AttemptAnswer[]
+
+  @@index([userId])
+  @@index([examId])
+}
+
+model AttemptAnswer {
+  id           String  @id @default(cuid())
+  attemptId    String
+  questionId   String
+  givenAnswer  String?
+  pointsEarned Float   @default(0)
+  isCorrect    Boolean @default(false)
+  feedback     String?
+  gradedBy     String?
+
+  attempt  TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  programId   String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  program   Program? @relation(fields: [programId], references: [id], onDelete: Cascade)
+  createdBy User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+
+model Plan {
+  id           String  @id @default(cuid())
+  code         String  @unique
+  title        String
+  description  String?
+  priceMnt     Int
+  durationDays Int     @default(30) // 30 хоногийн эрх
+  active       Boolean @default(true)
+  createdAt    DateTime @default(now())
+
+  exams        PlanExam[]
+  transactions PaymentTransaction[]
+}
+
+model PlanExam {
+  planId String
+  examId String
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@id([planId, examId])
+}
+
+model PaymentTransaction {
+  id            String    @id @default(cuid())
+  userId        String
+  planId        String?
+  transactionId String    @unique
+  invoiceId     String?
+  amount        Int
+  status        String    @default("PENDING")
+  provider      String?
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+  expiresAt     DateTime? // 30 хоногийн дараа дуусна
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan? @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}

@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: workahead
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/workahead?schema=public
+      JWT_SECRET: ${JWT_SECRET:?set a strong JWT_SECRET}
+      CSRF_SECRET: ${CSRF_SECRET:-}
+      REDIS_URL: redis://redis:6379
+      PORT: "4000"
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost}
+      BONUM_API_BASE_URL: ${BONUM_API_BASE_URL:-https://testapi.bonum.mn}
+      BONUM_APP_SECRET: ${BONUM_APP_SECRET:-}
+      BONUM_TERMINAL_ID: ${BONUM_TERMINAL_ID:-}
+      BONUM_CHECKSUM_KEY: ${BONUM_CHECKSUM_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+    # Схем анх удаа push хийх (дараалан ажилладаг, нэг удаа л хэрэгтэй):
+    command: sh -c "npx prisma db push --skip-generate && node src/index.js"
+
+  client:
+    build: ./client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${PORT:-80}:80"
+
+volumes:
+  pgdata:

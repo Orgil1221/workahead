@@ -1,0 +1,167 @@
+﻿import { Router } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { z } from 'zod';
+import prisma from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
+import { rateLimitFlexible } from '../middleware/rateLimitFlexible.js';
+import { validate } from '../middleware/validate.js';
+
+const router = Router();
+const authLimiter = rateLimitFlexible('auth');
+const sign = (user) =>
+  jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+function setAuthCookie(res, token) {
+  const isProd = process.env.NODE_ENV === 'production';
+  res.cookie('wa_token', token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'Strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
+}
+function clearAuthCookie(res) {
+  res.clearCookie('wa_token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Strict', path: '/' });
+  res.clearCookie('x-csrf-token', { sameSite: 'Lax', secure: false, path: '/' });
+}
+
+const registerSchema = z.object({
+  body: z.object({
+    email: z.string().email('Имэйл буруу байна').max(120),
+    password: z.string().min(8, 'Нууц үг хамгийн багадаа 8 тэмдэгт').max(72),
+    name: z.string().min(2, 'Нэр хамгийн багадаа 2 тэмдэгт').max(60),
+    programId: z.string().cuid().nullable().optional().or(z.literal('')),
+    // Жагсаалтад байхгүй мэргэжлийг өөрөө бичих сонголт
+    customProgram: z.string().min(2, 'Мэргэжлийн нэр хамгийн багадаа 2 тэмдэгт').max(80).optional(),
+    school: z.string().max(30).optional(),
+  }),
+});
+const loginSchema = z.object({
+  body: z.object({
+    email: z.string().email('Имэйл буруу байна'),
+    password: z.string().min(1, 'Нууц үг шаардлагатай'),
+  }),
+});
+
+router.post('/register', authLimiter, validate(registerSchema), async (req, res, next) => {
+  try {
+    const { email, password, name, programId, customProgram, school } = req.body;
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) return res.status(409).json({ error: 'Энэ имэйл бүртгэлтэй байна' });
+    const finalProgramId = await resolveProgramId({ programId, customProgram, school });
+    if (customProgram?.trim() && !finalProgramId)
+      return res.status(400).json({ error: 'Мэргэжил үүсгэж чадсангүй — дахин оролдоно уу' });
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { email, passwordHash, name, role: 'STUDENT', programId: finalProgramId },
+      include: { program: { select: { id: true, name: true, school: true, code: true } } },
+    });
+    const token = sign(user);
+    setAuthCookie(res, token);
+    res.status(201).json({ token, user: safe(user) });
+  } catch (e) { next(e); }
+});
+
+router.post('/login', authLimiter, validate(loginSchema), async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { program: { select: { id: true, name: true, school: true, code: true } } },
+    });
+    if (!user || !(await bcrypt.compare(password, user.passwordHash)))
+      return res.status(401).json({ error: 'Имэйл эсвэл нууц үг буруу' });
+    const token = sign(user);
+    setAuthCookie(res, token);
+    res.json({ token, user: safe(user) });
+  } catch (e) { next(e); }
+});
+
+router.get('/me', requireAuth, (req, res) => res.json({ user: safe(req.user) }));
+
+router.post('/logout', (req, res) => {
+  clearAuthCookie(res);
+  res.json({ ok: true });
+});
+
+const profileSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).max(60).optional(),
+    phone: z.string().max(20).nullable().optional(),
+    programId: z.string().cuid().nullable().optional().or(z.literal('')),
+    customProgram: z.string().min(2, 'Мэргэжлийн нэр хамгийн багадаа 2 тэмдэгт').max(80).optional(),
+    school: z.string().max(30).optional(),
+  }),
+});
+
+// programId өгөгдсөн бол шууд, үгүй бол customProgram-оор мэргэжил олж/үүсгэж буцаана.
+// Custom мэргэжил салбар сургуультай үүсэх тул нүүр хуудасны хичээлийн жагсаалтад орохгүй,
+// зөвхөн бүртгэл/профайл/админы мэргэжлийн сонголтод нэмэгдэнэ.
+async function resolveProgramId({ programId, customProgram, school }) {
+  if (programId) {
+    const p = await prisma.program.findUnique({ where: { id: programId } });
+    if (!p) return null;
+    return p.id;
+  }
+  const name = customProgram?.trim();
+  if (!name) return null;
+  const sch = school?.trim() || null;
+  const existing = await prisma.program.findFirst({ where: { name, school: sch } });
+  if (existing) return existing.id;
+  const uni = await prisma.university.findFirst({ where: { shortName: 'МУИС' } })
+    || await prisma.university.findFirst();
+  const created = await prisma.program.create({
+    data: { name, school: sch, universityId: uni?.id },
+  });
+  return created.id;
+}
+const passwordSchema = z.object({
+  body: z.object({
+    current: z.string().min(1, 'Одоогийн нууц үг шаардлагатай'),
+    next: z.string().min(8, 'Шинэ нууц үг хамгийн багадаа 8 тэмдэгт').max(72),
+  }),
+});
+
+router.put('/profile', requireAuth, validate(profileSchema), async (req, res, next) => {
+  try {
+    const { name, phone, programId, customProgram, school } = req.body || {};
+    const data = {};
+    if (name?.trim()) data.name = name.trim();
+    if (phone !== undefined) data.phone = phone?.trim() || null;
+    if (programId !== undefined || customProgram !== undefined) {
+      const finalProgramId = await resolveProgramId({ programId, customProgram, school });
+      if (customProgram?.trim() && !finalProgramId)
+        return res.status(400).json({ error: 'Мэргэжил үүсгэж чадсангүй — дахин оролдоно уу' });
+      data.programId = finalProgramId;
+    }
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data,
+      include: { program: { select: { id: true, name: true, school: true, code: true } } },
+    });
+    res.json({ user: safe(user) });
+  } catch (e) { next(e); }
+});
+
+router.post('/password', requireAuth, validate(passwordSchema), async (req, res, next) => {
+  try {
+    const { current, next: newPass } = req.body || {};
+    const u = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!u || !(await bcrypt.compare(current || '', u.passwordHash)))
+      return res.status(400).json({ error: 'Одоогийн нууц үг буруу' });
+    await prisma.user.update({
+      where: { id: u.id },
+      data: { passwordHash: await bcrypt.hash(newPass, 10) },
+    });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+function safe(u) {
+  const { passwordHash, ...rest } = u;
+  return rest;
+}
+
+export default router;

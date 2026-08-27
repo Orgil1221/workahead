@@ -1,0 +1,99 @@
+{
+  "exam_id": "math1b-2024-fall-variant1",
+  "title": "Математик 1Б — Явцын шалгалт (2024 оны 10-р сарын 30, Хувилбар 1)",
+  "source": "2024 оны бодит явцын шалгалт (Хэрэглээний математикийн тэнхим)",
+  "year": 2024,
+  "variant": "Variant 1",
+  "questions": [
+    {
+      "type": "open",
+      "prompt": "$(\\cos 20^\\circ + i\\sin 20^\\circ)^{9}$ тооны алгебр хэлбэрийг бич.",
+      "model_solution": "Муаврын томъёогоор: (cos20°+isin20°)^9 = cos180° + i·sin180° = -1 + 0i.",
+      "answer": "-1",
+      "points": 2,
+      "needs_review": true,
+      "tags": ["комплекс тоо", "Муаврын томъёо"]
+    },
+    {
+      "type": "open",
+      "prompt": "$\\lim_{n\\to\\infty}\\dfrac{n^2+3n}{2n^2-1}$ хязгаарыг бод.",
+      "model_solution": "Тоологч, хуваагчийг n²-т хуваана: (1+3/n)/(2-1/n²) → 1/2.",
+      "answer": "1/2",
+      "points": 1,
+      "needs_review": true,
+      "tags": ["хязгаар", "дараалал"]
+    },
+    {
+      "type": "open",
+      "prompt": "$\\lim_{x\\to 0}\\dfrac{\\tan 5x - \\sin 3x}{x}$ хязгаарыг бод.",
+      "model_solution": "tan5x ≈ 5x, sin3x ≈ 3x бага x-д. Хязгаар = (5x-3x)/x = 2.",
+      "answer": "2",
+      "points": 2,
+      "needs_review": true,
+      "tags": ["хязгаар", "тригонометр"]
+    },
+    {
+      "type": "open",
+      "prompt": "$f(x)=\\sqrt[3]{x}$ функцийн $x=8$ цэг дэх уламжлалыг тодорхойлолтоор ол.",
+      "model_solution": "f'(x) = lim_{h→0}[(x+h)^{1/3}-x^{1/3}]/h = (1/3)x^{-2/3}. x=8 дээр: (1/3)·8^{-2/3} = (1/3)(1/4) = 1/12.",
+      "answer": "f'(8) = 1/12",
+      "points": 3,
+      "needs_review": true,
+      "tags": ["уламжлалын тодорхойлолт"]
+    },
+    {
+      "type": "open",
+      "prompt": "$y=x^{\\sin x}$ ($x>0$) функцийн уламжлалыг ол.",
+      "model_solution": "Логарифм уламжлал: ln y = sin x · ln x. y'/y = cos x·ln x + sin x/x. Тэгэхээр y' = x^{sin x}(cos x·ln x + sin x/x).",
+      "answer": "y' = x^{\\sin x}\\left(\\cos x \\ln x + \\dfrac{\\sin x}{x}\\right)",
+      "points": 3,
+      "needs_review": true,
+      "tags": ["логарифм уламжлал"]
+    },
+    {
+      "type": "open",
+      "prompt": "$x^3+y^3-3xy=0$ далд функцийн графикийн гарал цэг дэх шүргэгчийн налууг ол.",
+      "model_solution": "3x²+3y²y'-3y-3xy'=0 ⟹ y'(y²-x)=y-x². (0,0) дээр хоёр тал 0 болохоор L'Hôpital-аар эсвэл y=tx солилтоор: y~x²/(1-t³)... Гол утга: налуу x=0 цэгт 0.",
+      "answer": "Налуу = 0",
+      "points": 3,
+      "needs_review": true,
+      "tags": ["далд функц", "шүргэгч"]
+    },
+    {
+      "type": "open",
+      "prompt": "$f(x)=x e^{-x}$ функцийн локал экстремумуудыг ол.",
+      "model_solution": "f'(x)=e^{-x}(1-x). f'=0 ⟹ x=1. x<1 үед f'>0, x>1 үед f'<0 тул x=1 дээр локал максимум. f(1)=e^{-1}.",
+      "answer": "Локал максимум f(1) = 1/e; минимум байхгүй",
+      "points": 2,
+      "needs_review": true,
+      "tags": ["экстремум"]
+    },
+    {
+      "type": "open",
+      "prompt": "$y=\\dfrac{x}{x^2-4}$ муруйн бүх асимптотыг ол.",
+      "model_solution": "Босоо: x²-4=0 ⟹ x=±2. Налуу: x→∞ үед y ~ x/x² = 1/x → 0 тул y=0 хэвтээ асимптот.",
+      "answer": "Босоо: x=2, x=-2; Хэвтээ: y=0",
+      "points": 3,
+      "needs_review": true,
+      "tags": ["асимптот"]
+    },
+    {
+      "type": "open",
+      "prompt": "$y=(1+x^2)^{x}$ функцийн $x=1$ дэх дифференциалыг ол.",
+      "model_solution": "ln y = x ln(1+x²), y'/y = ln(1+x²) + 2x²/(1+x²). x=1 дээр y=2, y'/y = ln2 + 1. dy = 2(ln2+1)dx.",
+      "answer": "dy = 2(1+\\ln 2)\\,dx (x=1 дээр)",
+      "points": 3,
+      "needs_review": true,
+      "tags": ["дифференциал", "логарифм уламжлал"]
+    },
+    {
+      "type": "open",
+      "prompt": "$[0,1]$ завсарт $f(x)=x^3-x$ функцийн хувьд Роллын теоремыг хангах $c$-г ол.",
+      "model_solution": "f(0)=f(1)=0 тул теорем хангагдана. f'(x)=3x²-1=0 ⟹ c=±1/√3. [0,1] дотор c=1/√3.",
+      "answer": "c = 1/√3 ≈ 0.577",
+      "points": 2,
+      "needs_review": true,
+      "tags": ["Роллын теорем", "дундаж утгын теорем"]
+    }
+  ]
+}
