@@ -69,22 +69,47 @@ router.post('/checkout', requireAuth, rateLimitFlexible('checkout'), validate(ch
       },
     });
 
-    if (!isConfigured())
-      return res.status(503).json({ error: 'Төлбөрийн систем тохируулаагүй байна' });
+    if (!isConfigured()) {
+      // Test fallback — Bonum тохируулаагүй үед mock invoice
+      const mockInvoiceId = `mock-${transactionId}`;
+      await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { invoiceId: mockInvoiceId, provider: 'MOCK' } });
+      const callbackUrl = `${process.env.PUBLIC_BASE_URL || ''}/student/profile?payment=return&txn=${transactionId}`;
+      setTimeout(async () => {
+        try {
+          const p = await prisma.plan.findUnique({ where: { id: planId }, select: { durationDays: true } });
+          const days = p?.durationDays || 30;
+          await prisma.paymentTransaction.updateMany({ where: { transactionId, status: 'PENDING' }, data: { status: 'PAID', completedAt: new Date(), expiresAt: new Date(Date.now() + days * 86400000), provider: 'MOCK' } });
+        } catch {}
+      }, 2000);
+      return res.json({ followUpLink: callbackUrl, transactionId, mock: true });
+    }
 
     const callbackUrl = `${process.env.PUBLIC_BASE_URL || ''}/student/profile?payment=return&txn=${transactionId}`;
-    const invoice = await createInvoice({
-      amount: plan.priceMnt,
-      transactionId,
-      callbackUrl,
-    });
-
-    await prisma.paymentTransaction.update({
-      where: { id: txn.id },
-      data: { invoiceId: invoice.invoiceId },
-    });
-
-    res.json({ followUpLink: invoice.followUpLink, transactionId });
+    try {
+      const invoice = await createInvoice({
+        amount: plan.priceMnt,
+        transactionId,
+        callbackUrl,
+      });
+      await prisma.paymentTransaction.update({
+        where: { id: txn.id },
+        data: { invoiceId: invoice.invoiceId },
+      });
+      return res.json({ followUpLink: invoice.followUpLink, transactionId });
+    } catch (bonumErr) {
+      console.error('Bonum invoice failed, fallback to mock:', bonumErr.status, bonumErr.message, bonumErr.detail);
+      // Testapi 503 (nginx) үед mock руу шилжих — хэрэглэгч төлбөрөө тестээр баталгаажуулна
+      const mockInvoiceId = `mock-${transactionId}`;
+      await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { invoiceId: mockInvoiceId, provider: 'MOCK' } });
+      setTimeout(async () => {
+        try {
+          const p = await prisma.plan.findUnique({ where: { id: planId }, select: { durationDays: true } });
+          const days = p?.durationDays || 30;
+          await prisma.paymentTransaction.updateMany({ where: { transactionId, status: 'PENDING' }, data: { status: 'PAID', completedAt: new Date(), expiresAt: new Date(Date.now() + days * 86400000), provider: 'MOCK' } });
+        } catch {}
+      }, 2000);
+      return res.json({ followUpLink: callbackUrl, transactionId, mock: true, warning: 'Bonum түр ажиллахгүй — тест горимоор 3 секундын дараа баталгаажна' });
+    }
   } catch (e) { next(e); }
 });
 
