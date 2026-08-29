@@ -32,7 +32,7 @@ const registerSchema = z.object({
     email: z.string().email('Имэйл буруу байна').max(120),
     password: z.string().min(8, 'Нууц үг хамгийн багадаа 8 тэмдэгт').max(72),
     name: z.string().min(2, 'Нэр хамгийн багадаа 2 тэмдэгт').max(60),
-    programId: z.string().cuid().nullable().optional().or(z.literal('')),
+    programId: z.string().min(1).max(60).nullable().optional().or(z.literal('')),
     // Жагсаалтад байхгүй мэргэжлийг өөрөө бичих сонголт
     customProgram: z.string().min(2, 'Мэргэжлийн нэр хамгийн багадаа 2 тэмдэгт').max(80).optional(),
     school: z.string().max(30).optional(),
@@ -90,7 +90,7 @@ const profileSchema = z.object({
   body: z.object({
     name: z.string().min(2).max(60).optional(),
     phone: z.string().max(20).nullable().optional(),
-    programId: z.string().cuid().nullable().optional().or(z.literal('')),
+    programId: z.string().min(1).max(60).nullable().optional().or(z.literal('')),
     customProgram: z.string().min(2, 'Мэргэжлийн нэр хамгийн багадаа 2 тэмдэгт').max(80).optional(),
     school: z.string().max(30).optional(),
   }),

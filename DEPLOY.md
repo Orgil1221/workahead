@@ -28,8 +28,8 @@
 | `JWT_SECRET` | 64 оронтой санамсаргүй тэмдэгт (доорх команд үүсгэнэ) |
 | `CSRF_SECRET` | Өөр нэг санамсаргүй тэмдэгт |
 | `NODE_ENV` | `production` |
-| `PUBLIC_BASE_URL` | Vercel-ийн хаяг (жишээ: `https://workahead.vercel.app`) — 4️⃣ хийсний дараа нэм |
-| `CORS_ORIGIN` | Vercel-ийн хаяг (same-origin proxy тул заавал биш, байлгавал сайн) |
+| `PUBLIC_BASE_URL` | `https://workahead.me` (өмнө `https://workahead.vercel.app` байсан) — 4️⃣ хийсний дараа нэм |
+| `CORS_ORIGIN` | `https://workahead.me,https://www.workahead.me` |
 | `BONUM_API_BASE_URL` | `https://testapi.bonum.mn` |
 | `BONUM_APP_SECRET` | Одоогийн .env дэх утга |
 | `BONUM_TERMINAL_ID` | Одоогийн .env дэх утга |
@@ -51,11 +51,13 @@
 4. ⚠️ **Deploy дарахын өмнө:** `client/vercel.json` доторх Render URL баталгаажсан эсэхийг шалга — Render-ийн Name өөр байвал тэр хаяг руу зас
 5. Deploy → таны сайт: `https://workahead-xxx.vercel.app`
 
-## 4️⃣ Холболт ба эцсийн тохиргоо
+## 4️⃣ Холболт ба эцсийн тохиргоо — workahead.me
 
-1. Vercel хаягаа авсны дараа Render → `PUBLIC_BASE_URL` env-г шинэчилж **Save** (авто redeploy)
-2. **UptimeRobot** (https://uptimerobot.com, үнэгүй): Add New Monitor → HTTP(s) → Render-ийн `/api/health` URL → 5 мин интервал — сервис унтахгүй байлгана
-3. Bonum webhook (тест болвол): тэдгээрийн dashboard дээр callback URL → `https://work-ahead-api.onrender.com/api/payments/webhook`
+1. **Vercel → Domains:** `workahead.me` + `www.workahead.me` нэм → заасан DNS-ийг Namecheap-д хуулах (доорх 3.5-г үз)
+2. **Namecheap → Advanced DNS:** `Type A | Host @ | Value 76.76.21.21` + `CNAME | Host www | Value cname.vercel-dns.com` (Vercel-ээс өгсөн утга баталгаажуулах). 5-10 мин хүлээ.
+3. Render → `PUBLIC_BASE_URL=https://workahead.me` + `CORS_ORIGIN=https://workahead.me,https://www.workahead.me` → **Save** (авто redeploy)
+4. **UptimeRobot** (https://uptimerobot.com, үнэгүй): Add New Monitor → HTTP(s) → Render-ийн `/api/health` URL → 5 мин интервал — сервис унтахгүй байлгана
+5. Bonum webhook (тест болвол): тэдгээрийн dashboard дээр callback URL → `https://work-ahead-api.onrender.com/api/payments/webhook` (домэйн сольсон ч webhook Render API дээр хэвээр)
 
 ## 5️⃣ Шалгах жагсаалт
 
