@@ -24,22 +24,11 @@ const limiters = {
 };
 
 export function rateLimitFlexible(type = 'general') {
-  // Түр унтраах: .env дээр RATE_LIMIT_DISABLED=1 бол бүх rate limit идэвхгүй болно
-  if (process.env.RATE_LIMIT_DISABLED === '1') {
-    return (_req, _res, next) => next();
-  }
-  const limiter = limiters[type] || limiters.general;
-  return async (req, res, next) => {
-    const key = type === 'checkout' && req.user?.id ? req.user.id : (req.ip || req.socket?.remoteAddress || 'unknown');
-    try {
-      await limiter.consume(key);
-      next();
-    } catch (rej) {
-      const secs = Math.round(rej.msBeforeNext / 1000) || 60;
-      res.set('Retry-After', String(secs));
-      return res.status(429).json({ error: `Хэт олон хүсэлт. ${secs} секундын дараа дахин орно уу.` });
-    }
-  };
+  // Хэрэглэгчийн хүсэлтээр бүрэн унтраав — бүх орчинд rate limit идэвхгүй
+  return (_req, _res, next) => next();
+  // Дараа идэвхжүүлэх бол доорхыг сэргээнэ:
+  // if (process.env.RATE_LIMIT_DISABLED === '1') return (_req,_res,next)=>next();
+  // const limiter = limiters[type] || limiters.general; ...
 }
 
 // Fallback for legacy usage: rateLimit({windowMs, max}) still works via memory
