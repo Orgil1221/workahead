@@ -18,9 +18,9 @@ function createLimiter({ points, duration, keyPrefix }) {
 }
 
 const limiters = {
-  auth: createLimiter({ points: 5, duration: 15 * 60, keyPrefix: 'rl_auth' }), // 5 per 15 min per IP
-  checkout: createLimiter({ points: 10, duration: 60 * 60, keyPrefix: 'rl_checkout' }), // 10 per hour per user
-  general: createLimiter({ points: 100, duration: 60, keyPrefix: 'rl_general' }), // 100 per min per IP
+  auth: createLimiter({ points: 20, duration: 10 * 60, keyPrefix: 'rl_auth' }), // 20 per 10 min per IP (был 5/15мин — 727с түгжээ суллах)
+  checkout: createLimiter({ points: 20, duration: 60 * 60, keyPrefix: 'rl_checkout' }), // 20 per hour per user
+  general: createLimiter({ points: 200, duration: 60, keyPrefix: 'rl_general' }), // 200 per min per IP
 };
 
 export function rateLimitFlexible(type = 'general') {

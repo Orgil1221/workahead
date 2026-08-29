@@ -95,9 +95,8 @@ npm run seed                # demo хэрэглэгчид + files/*.json имп�
 npm run dev                 # http://localhost:4000
 ```
 
-Demo бүртгэл:
-- Админ: `admin@workahead.mn` / `admin123`
-- Оюутан: `student@workahead.mn` / `student123`
+Demo бүртгэл (зөвхөн локал `npm run seed` дараа):
+- `seed.js` 2 demo хэрэглэгч үүсгэнэ — production-д **шууд идэвхгүй болгож, нууц үгээ солино уу** (доорх Аюулгүй байдал харна уу).
 
 Гар файлаас гараар импортлох:
 
