@@ -123,7 +123,16 @@ router.post('/exams', async (req, res, next) => {
       variant: req.body.variant || null,
       durationMin: req.body.durationMin ? Number(req.body.durationMin) : null,
       order: Number(req.body.order ?? 0),
+      ...(req.body.isFree !== undefined && { isFree: Boolean(req.body.isFree) }),
     }});
+    // Шинэ шалгалт төлбөртэй бол (isFree !== true) шууд 30 хоногийн багцад оруулна — багцгүй хүн нэвтэрч болохгүй
+    if (!exam.isFree) {
+      const defaultPlan = await prisma.plan.findFirst({ where: { code: 'seasonal-math1b' } });
+      if (defaultPlan) {
+        const exists = await prisma.planExam.findFirst({ where: { planId: defaultPlan.id, examId: exam.id } });
+        if (!exists) await prisma.planExam.create({ data: { planId: defaultPlan.id, examId: exam.id } });
+      }
+    }
     res.status(201).json({ exam });
   } catch (e) { next(e); }
 });

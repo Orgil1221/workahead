@@ -8,7 +8,16 @@ export async function userHasExamAccess(userId, examId) {
   if (!exam) return false;
   if (exam.isFree) return true;
   const gated = await prisma.planExam.findFirst({ where: { examId }, select: { planId: true } });
-  if (!gated) return true;
+  if (!gated) {
+    // Шалгалт ямар ч багцад ороогүй ч төлбөртэй гэж үзнэ — багцгүй хүн орохгүй
+    if (!userId) return false;
+    const now = new Date();
+    const anyActive = await prisma.paymentTransaction.findFirst({
+      where: { userId, status: 'PAID', OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+      select: { id: true },
+    });
+    return Boolean(anyActive);
+  }
   if (!userId) return false;
   const now = new Date();
   const owned = await prisma.paymentTransaction.findFirst({

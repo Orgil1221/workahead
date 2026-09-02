@@ -193,8 +193,8 @@ export default function AttemptRunner() {
           </span>
           <div className="q-prompt" style={{ margin: '10px 0' }}><MathText text={q.prompt} /></div>
 
-          {isTest || q.type === 'test' ? (
-            // TEST горим — 4 сонголт (dark/light аль алинд тод)
+          {(q.type === 'test' || (isTest && q.choices && q.choices.length === 4)) ? (
+            // TEST — 4 сонголт (зөвхөн choices-той асуултууд)
             <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
               {(q.choices || []).map((c) => {
                 const selected = answers[q.id]?.given === c.key;
@@ -228,7 +228,7 @@ export default function AttemptRunner() {
                   </button>
                 );
               })}
-              {(!q.choices || q.choices.length === 0) && <p className="small faint">Сонголтууд ачааллаагүй байна.</p>}
+              {(!q.choices || q.choices.length !== 4) && <p className="small" style={{ color: 'var(--warn)' }}>Энэ асуулт тест биш — Задгай хэлбэрээр хариулна. Админ 4 сонголт + correct_choice оруулаагүй.</p>}
             </div>
           ) : (
             // Задгай — math-field
