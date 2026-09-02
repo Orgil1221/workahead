@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
+import { warmup } from './api/client.js';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import RootRedirect from './pages/RootRedirect.jsx';
@@ -36,38 +38,120 @@ function Guard({ children, admin }) {
   return children;
 }
 
+function WarmupBanner() {
+  const [visible, setVisible] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    let showTimer = null;
+    let dotsTimer = null;
+
+    // Only show banner if health takes > 850ms (cold start)
+    showTimer = setTimeout(() => {
+      if (!cancelled) setVisible(true);
+    }, 850);
+
+    (async () => {
+      // warmup() already retries 4x with 10s timeout internally
+      for (let i = 0; i < 4; i++) {
+        if (cancelled) return;
+        setAttempt(i);
+        try {
+          const ok = await warmup();
+          if (ok) break;
+        } catch {}
+        // warmup() handles its own retries, so single call is enough
+        break;
+      }
+      if (!cancelled) {
+        clearTimeout(showTimer);
+        setVisible(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(showTimer);
+      clearTimeout(dotsTimer);
+    };
+  }, []);
+
+  if (!visible) return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 60,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        padding: '10px 14px',
+        fontSize: '.85rem',
+        fontWeight: 600,
+        background: 'rgba(39,66,124,.92)',
+        color: '#fffdf7',
+        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(255,255,255,.15)',
+      }}
+    >
+      <span
+        style={{
+          width: 16,
+          height: 16,
+          border: '2px solid rgba(255,253,247,.35)',
+          borderTopColor: '#fffdf7',
+          borderRadius: '50%',
+          display: 'inline-block',
+          animation: 'spin .7s linear infinite',
+          flexShrink: 0,
+        }}
+      />
+      Сервер асч байна{'.'.repeat((attempt % 3) + 1)} — Render free cold start ~20-50с, түр хүлээнэ үү
+      <span style={{ opacity: .85, fontWeight: 500, fontSize: '.78rem' }}>(refresh хийх шаардлагагүй)</span>
+    </div>
+  );
+}
+
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<RootRedirect />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+    <>
+      <WarmupBanner />
+      <Routes>
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      <Route path="/admin" element={<Guard admin><AdminLayout /></Guard>}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="catalog" element={<AdminCatalog />} />
-        <Route path="questions" element={<AdminQuestions />} />
-        <Route path="import" element={<AdminImport />} />
-        <Route path="reports" element={<AdminReports />} />
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="notify" element={<AdminNotify />} />
-      </Route>
+        <Route path="/admin" element={<Guard admin><AdminLayout /></Guard>}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="catalog" element={<AdminCatalog />} />
+          <Route path="questions" element={<AdminQuestions />} />
+          <Route path="import" element={<AdminImport />} />
+          <Route path="reports" element={<AdminReports />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="notify" element={<AdminNotify />} />
+        </Route>
 
-      <Route path="/student" element={<Guard><StudentLayout /></Guard>}>
-        <Route index element={<StudentHome />} />
-        <Route path="u/:universityId" element={<UniversityPage />} />
-        <Route path="p/:programId" element={<ProgramPage />} />
-        <Route path="exam/:examId" element={<ExamDetail />} />
-        <Route path="attempt/:attemptId" element={<AttemptRunner />} />
-        <Route path="review" element={<Review />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="dashboard" element={<StudentDashboard />} />
-        <Route path="bookmarks" element={<Bookmarks />} />
-        <Route path="history" element={<History />} />
-        <Route path="notifications" element={<Notifications />} />
-      </Route>
+        <Route path="/student" element={<Guard><StudentLayout /></Guard>}>
+          <Route index element={<StudentHome />} />
+          <Route path="u/:universityId" element={<UniversityPage />} />
+          <Route path="p/:programId" element={<ProgramPage />} />
+          <Route path="exam/:examId" element={<ExamDetail />} />
+          <Route path="attempt/:attemptId" element={<AttemptRunner />} />
+          <Route path="review" element={<Review />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="dashboard" element={<StudentDashboard />} />
+          <Route path="bookmarks" element={<Bookmarks />} />
+          <Route path="history" element={<History />} />
+          <Route path="notifications" element={<Notifications />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }

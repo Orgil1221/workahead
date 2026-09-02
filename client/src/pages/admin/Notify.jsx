@@ -6,12 +6,32 @@ export default function AdminNotify() {
   const [programs, setPrograms] = useState([]);
   const [form, setForm] = useState({ title: '', body: '', programId: '' });
   const [busy, setBusy] = useState(false);
+  const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(null);
   const toast = useToast();
 
-  useEffect(() => {
+  const loadPrograms = () => {
     api('/admin/catalog/universities')
       .then((d) => setPrograms(d.universities.flatMap((u) => u.programs.map((p) => ({ ...p, university: u.name })))))
       .catch((e) => toast(e.message));
+  };
+
+  const loadList = async () => {
+    try {
+      setLoading(true);
+      const d = await api('/notifications');
+      setList(d.notifications || []);
+    } catch (e) {
+      toast(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPrograms();
+    loadList();
   }, []);
 
   const send = async (e) => {
@@ -21,8 +41,23 @@ export default function AdminNotify() {
       await api('/notifications', { method: 'POST', body: form });
       toast('Мэдэгдэл илгээлээ');
       setForm({ title: '', body: '', programId: '' });
+      loadList();
     } catch (err) { toast(err.message); }
     finally { setBusy(false); }
+  };
+
+  const remove = async (id) => {
+    if (!window.confirm('Энэ мэдэгдлийг устгах уу? Оюутнуудын хуудаснаас шууд алга болно.')) return;
+    setDeleting(id);
+    try {
+      await api(`/notifications/${id}`, { method: 'DELETE' });
+      setList((prev) => prev.filter((n) => n.id !== id));
+      toast('Мэдэгдэл устгалаа');
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      setDeleting(null);
+    }
   };
 
   return (
@@ -50,6 +85,44 @@ export default function AdminNotify() {
       <p className="small muted">
         Мэдэгдэл нь сонгосон хөтөлбөрийг (эсвэл бүгдийг) хадгалсан оюутнуудын in-app мэдэгдлийн хуудсанд харагдана.
       </p>
+
+      <div className="page-title-row" style={{ marginTop: 28 }}>
+        <h2 style={{ margin: 0 }}>Илгээсэн мэдэгдлүүд</h2>
+        <span className="badge">{list.length}</span>
+      </div>
+
+      {loading ? (
+        <div className="card" style={{ textAlign: 'center', padding: 24 }}><span className="spinner" style={{ margin: '10px auto' }} /></div>
+      ) : list.length === 0 ? (
+        <div className="card empty-state">Илгээсэн мэдэгдэл алга</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {list.map((n) => (
+            <div key={n.id} className="card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '.95rem', wordBreak: 'break-word' }}>{n.title}</div>
+                  <div className="small muted" style={{ marginTop: 2 }}>
+                    {n.program ? n.program.name : 'Бүх оюутан'} · {n.createdBy?.name || 'Админ'} · {new Date(n.createdAt).toLocaleString('mn-MN')}
+                  </div>
+                </div>
+                <button
+                  className="btn ghost-danger small"
+                  onClick={() => remove(n.id)}
+                  disabled={deleting === n.id}
+                  title="Устгах"
+                  style={{ flexShrink: 0 }}
+                >
+                  {deleting === n.id ? 'Устгаж…' : 'Устгах'}
+                </button>
+              </div>
+              <div style={{ fontSize: '.9rem', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--ink-soft)' }}>
+                {n.body}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }

@@ -5,13 +5,13 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 const router = Router();
 router.use(requireAuth);
 
-// Student: notifications for their saved program (or global)
+// List — student: only global + own program; admin: all
 router.get('/', async (req, res, next) => {
   try {
+    const isAdmin = req.user.role === 'ADMIN';
+    const where = isAdmin ? {} : { OR: [{ programId: null }, { programId: req.user.programId }] };
     const notifications = await prisma.notification.findMany({
-      where: {
-        OR: [{ programId: null }, { programId: req.user.programId }],
-      },
+      where,
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
@@ -38,6 +38,17 @@ router.post('/', requireAuth, requireAdmin, async (req, res, next) => {
       },
     });
     res.status(201).json({ notification });
+  } catch (e) { next(e); }
+});
+
+// Admin: delete sent notification
+router.delete('/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const exists = await prisma.notification.findUnique({ where: { id } });
+    if (!exists) return res.status(404).json({ error: 'Мэдэгдэл олдсонгүй' });
+    await prisma.notification.delete({ where: { id } });
+    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 
