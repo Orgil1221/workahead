@@ -1,4 +1,8 @@
 {
+  "framework": "vite",
+  "buildCommand": "cd client && npm ci && npm run build",
+  "outputDirectory": "client/dist",
+  "installCommand": "cd client && npm ci",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://work-ahead-api.onrender.com/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
