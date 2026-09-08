@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { userHasExamAccess, paymentRequired } from '../services/access.js';
+import { shuffleChoicesForAttempt } from '../services/shuffle.js';
 
 const router = Router();
 
@@ -37,24 +38,38 @@ router.get('/:id', requireAuth, async (req, res, next) => {
     });
     const bookmarked = new Set(bookmarks.map((b) => b.questionId));
 
+    // Shuffle per-attempt if attemptId provided — each student gets random order, each attempt different
+    const attemptId = req.query.attemptId || req.query.attempt_id;
+    let attemptForShuffle = null;
+    if (attemptId) {
+      attemptForShuffle = await prisma.testAttempt.findFirst({ where: { id: String(attemptId), userId: req.user.id } });
+    }
+
     res.json({
       exam: {
         ...exam,
-        questions: exam.questions.map((q) => ({
-          id: q.id,
-          order: q.order,
-          type: q.type,
-          topic: q.topic,
-          level: q.level,
-          year: q.year,
-          points: q.points,
-          prompt: q.prompt,
-          tags: q.tags,
-          flagCount: q._count.flags,
-          bookmarked: bookmarked.has(q.id),
-          // тест горимд ашиглах сонголтууд — type test эсвэл open-д choices үүссэн бол тестэд хэрэглэнэ
-          choices: q.choices && Array.isArray(q.choices) && q.choices.length === 4 ? q.choices : undefined,
-        })),
+        questions: exam.questions.map((q) => {
+          let choices = q.choices && Array.isArray(q.choices) && q.choices.length === 4 ? q.choices : undefined;
+          // Per-attempt random: shuffle choices deterministically so each attempt has different positions
+          if (choices && attemptForShuffle) {
+            const shuffled = shuffleChoicesForAttempt(choices, q.correctChoice, attemptForShuffle.id, q.id);
+            choices = shuffled.choices;
+          }
+          return {
+            id: q.id,
+            order: q.order,
+            type: q.type,
+            topic: q.topic,
+            level: q.level,
+            year: q.year,
+            points: q.points,
+            prompt: q.prompt,
+            tags: q.tags,
+            flagCount: q._count.flags,
+            bookmarked: bookmarked.has(q.id),
+            choices,
+          };
+        }),
       },
     });
   } catch (e) { next(e); }

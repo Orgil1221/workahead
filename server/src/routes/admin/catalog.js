@@ -251,7 +251,7 @@ router.post('/questions', async (req, res, next) => {
       year: b.year ? Number(b.year) : null,
       source: b.source || null,
       prompt: b.prompt,
-      modelSolution: isTest ? null : (b.modelSolution || null),
+      modelSolution: b.modelSolution ?? b.explanation ?? null,
       answer: b.answer || null,
       choices: isTest ? choices : null,
       correctChoice: isTest ? correctChoice : null,
@@ -288,8 +288,9 @@ router.put('/questions/:id', async (req, res, next) => {
         const { choices, correctChoice } = normalizeChoices({ ...b, type: 'test' });
         data.choices = choices;
         data.correctChoice = correctChoice;
-        // test-д modelSolution хэрэггүй
-        if (b.modelSolution === undefined) data.modelSolution = null;
+        if (b.modelSolution !== undefined || b.explanation !== undefined) {
+          data.modelSolution = b.modelSolution ?? b.explanation ?? null;
+        }
       } else {
         data.choices = null;
         data.correctChoice = null;

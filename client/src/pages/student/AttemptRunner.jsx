@@ -41,10 +41,10 @@ export default function AttemptRunner() {
     }).catch(() => {});
   }, [attemptId]);
 
-  // Load exam questions once we know the attempt
+  // Load exam questions once we know the attempt — per-attempt random shuffle for test
   useEffect(() => {
     if (!attempt) return;
-    api(`/exams/${attempt.examId}`)
+    api(`/exams/${attempt.examId}?attemptId=${attempt.id}`)
       .then((d) => setQuestions(d.exam.questions))
       .catch(() => {});
     api('/bookmarks')

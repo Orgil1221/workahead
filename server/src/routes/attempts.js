@@ -3,6 +3,7 @@ import prisma from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { userHasExamAccess, paymentRequired } from '../services/access.js';
 import { gradeAnswer, aiConfigured } from '../services/gemini.js';
+import { shuffleChoicesForAttempt } from '../services/shuffle.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -28,8 +29,13 @@ router.post('/', async (req, res, next) => {
       });
       return next(paymentRequired(planExam?.plan?.title));
     }
-    // TEST горим open асуулттай ч ажиллана — per-question fallback (AttemptRunner: test choices байвал test UI, үгүй бол Задгай math-field)
-    // Шалгалт бүхэлдээ open байсан ч TEST эхлүүлэх боломжтой, ингэснээр 2 горим хоёул асуудалгүй ажиллана
+    if (normalizedMode === 'TEST') {
+      const qs = await prisma.question.findMany({ where: { examId }, select: { type: true, choices: true } });
+      const hasTestChoices = qs.some((q) => q.type === 'test' || (Array.isArray(q.choices) && q.choices.length === 4));
+      if (!hasTestChoices) {
+        return res.status(400).json({ error: 'Энэ шалгалтад тест сонголт оруулаагүй байна — зөвхөн Задгай горимоор ажиллах боломжтой. Админ тест асуулт (4 сонголт + correct_choice) нэмж оруулна уу.' });
+      }
+    }
     const attempt = await prisma.testAttempt.create({
       data: {
         userId: req.user.id,
@@ -62,12 +68,17 @@ router.post('/:id/answers', async (req, res, next) => {
 
     const isTestQuestion = question.type === 'test' || (attempt.mode === 'TEST' && Array.isArray(question.choices) && question.choices.length === 4);
     if (isTestQuestion) {
-      // TEST: A/B/C/D — шууд шалгана, AI оролцохгүй (open-д тест сонголт үүссэн ч TEST горимд ажиллана)
+      // TEST: A/B/C/D — шууд шалгана, AI оролцохгүй; per-attempt random shuffle тул attemptId-ээр хольсон correctChoice-тай харьцуулна
       const given = String(givenAnswer || '').trim().toUpperCase();
       if (!['A', 'B', 'C', 'D'].includes(given)) {
         return res.status(400).json({ error: 'Сонголт A/B/C/D байх ёстой' });
       }
-      const correct = String(question.correctChoice || '').toUpperCase();
+      let correct = String(question.correctChoice || '').toUpperCase();
+      // Shuffle per attempt — same seed as GET /exams?attemptId, so student's seen order matches grading
+      if (attempt.mode === 'TEST' && Array.isArray(question.choices) && question.choices.length === 4) {
+        const shuffled = shuffleChoicesForAttempt(question.choices, question.correctChoice, attempt.id, question.id);
+        correct = String(shuffled.correctChoice || '').toUpperCase();
+      }
       if (!correct) return res.status(500).json({ error: 'Тест асуултын зөв хариулт тохируулаагүй байна' });
       isCorrect = given === correct;
       pointsEarned = isCorrect ? question.points : 0;
@@ -212,7 +223,7 @@ router.post('/:id/finish', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Attempt detail with solutions (after finish)
+// Attempt detail with solutions (after finish) — per-attempt shuffle for test
 router.get('/:id', requireAuth, async (req, res, next) => {
   try {
     const attempt = await prisma.testAttempt.findFirst({
@@ -224,11 +235,25 @@ router.get('/:id', requireAuth, async (req, res, next) => {
     });
     if (!attempt) return res.status(404).json({ error: 'Тест олдсонгүй' });
 
+    const isTestAttempt = attempt.mode === 'TEST';
+    // Shuffle choices per attempt so each student/attempt sees different order (deterministic per attemptId+questionId)
+    const withShuffled = {
+      ...attempt,
+      answers: attempt.answers.map((a) => {
+        let q = a.question;
+        if (isTestAttempt && Array.isArray(q.choices) && q.choices.length === 4 && q.correctChoice) {
+          const shuffled = shuffleChoicesForAttempt(q.choices, q.correctChoice, attempt.id, q.id);
+          q = { ...q, choices: shuffled.choices, correctChoice: shuffled.correctChoice };
+        }
+        return { ...a, question: q };
+      }),
+    };
+
     // Дуусаагүй үед шийдэл/зөв хариултыг нууна — TEST-д correctChoice, Задгайд modelSolution/answer
     const hideSolutions = !attempt.finishedAt;
     const sanitized = {
-      ...attempt,
-      answers: attempt.answers.map((a) => (hideSolutions
+      ...withShuffled,
+      answers: withShuffled.answers.map((a) => (hideSolutions
         ? { ...a, question: { ...a.question, modelSolution: null, answer: null, correctChoice: null } }
         : a)),
     };

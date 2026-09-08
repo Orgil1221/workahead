@@ -1,7 +1,9 @@
 import prisma from '../db.js';
 
 function buildChoicesFromImport(q) {
-  if ((q.type || 'open') !== 'test') return { choices: null, correctChoice: null };
+  const hasChoicesInput = Array.isArray(q.choices) || q.choiceA || q.choiceB || q.choiceC || q.choiceD || q.correct_choice || q.correctChoice;
+  // Only skip choices if neither test nor choices input provided
+  if (!hasChoicesInput) return { choices: null, correctChoice: null };
   // Support: q.choices = [{key,text}] or q.choices as object, or choiceA..D + correct_choice
   let choices = null;
   if (Array.isArray(q.choices)) {
@@ -24,7 +26,7 @@ function buildChoicesFromImport(q) {
     if (!['A','B','C','D'].includes(correct)) throw Object.assign(new Error(`Тест асуулт "${(q.prompt||'').slice(0,30)}": correct_choice A/B/C/D байх ёстой`), { status: 400 });
     return { choices, correctChoice: correct };
   }
-  // If test type but no choices provided -> will be generated later via AI/script, allow null for now and mark needsReview
+  // If hasChoicesInput but no valid choices array -> treat as needsReview
   return { choices: null, correctChoice: null };
 }
 
@@ -80,7 +82,7 @@ export async function importExamJson(data, programId) {
         year: q.year ?? Number(data.year),
         source: q.source ?? data.source ?? null,
         prompt: q.prompt,
-        modelSolution: isTest ? null : (q.model_solution ?? null),
+        modelSolution: q.model_solution ?? q.explanation ?? null,
         answer: q.answer ?? null,
         choices,
         correctChoice,
