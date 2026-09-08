@@ -28,13 +28,8 @@ router.post('/', async (req, res, next) => {
       });
       return next(paymentRequired(planExam?.plan?.title));
     }
-    if (normalizedMode === 'TEST') {
-      const qs = await prisma.question.findMany({ where: { examId }, select: { type: true, choices: true } });
-      const hasTestChoices = qs.some((q) => q.type === 'test' || (Array.isArray(q.choices) && q.choices.length === 4));
-      if (!hasTestChoices) {
-        return res.status(400).json({ error: 'Энэ шалгалтад тест сонголт оруулаагүй байна — зөвхөн Задгай горимоор ажиллах боломжтой. Админ тест асуулт (4 сонголт + correct_choice) нэмж оруулна уу.' });
-      }
-    }
+    // TEST горим open асуулттай ч ажиллана — per-question fallback (AttemptRunner: test choices байвал test UI, үгүй бол Задгай math-field)
+    // Шалгалт бүхэлдээ open байсан ч TEST эхлүүлэх боломжтой, ингэснээр 2 горим хоёул асуудалгүй ажиллана
     const attempt = await prisma.testAttempt.create({
       data: {
         userId: req.user.id,

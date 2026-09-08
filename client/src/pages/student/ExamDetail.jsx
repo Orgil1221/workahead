@@ -65,11 +65,11 @@ export default function ExamDetail() {
           <button className="btn" disabled={busy} onClick={() => start('TIMED')}>
             <span style={{ fontSize: '1.1em', marginRight: 6 }}>✎</span> Задгай даалгавар
           </button>
-          <button className="btn secondary" disabled={busy || !hasTestChoices} onClick={() => start('TEST')} title={!hasTestChoices ? 'Энэ шалгалтад тест сонголт оруулаагүй — зөвхөн Задгай боломжтой' : undefined}>
+          <button className="btn secondary" disabled={busy} onClick={() => start('TEST')}>
             <span style={{ fontSize: '1.1em', marginRight: 6 }}>☑</span> Тест
           </button>
         </div>
-        {!hasTestChoices && <p className="small" style={{ marginTop: 8, marginBottom: 0, color: 'var(--warn)' }}>Энэ шалгалтад тест сонголт (4 хариулт) оруулаагүй тул Тест горим идэвхгүй — зөвхөн Задгай даалгавараар ажиллах боломжтой. JSON-д <code>type: "test"</code>, <code>choices</code> + <code>correct_choice</code> оруулна уу.</p>}
+        {!hasTestChoices && <p className="small" style={{ marginTop: 8, marginBottom: 0, color: 'var(--ink-faint)' }}>Энэ шалгалтад одоо <code>open</code> асуултууд л байна — <code>Тест</code> горим дарвал мөн адил асуултууд <code>Задгай</code> хэлбэрээр (бичгээр) гарч ирэх тул 2 горим хоёул ажиллана. Жинхэнэ 4 сонголттой тест харуулах бол <code>type: "test"</code> + <code>choices</code> нэмнэ.</p>}
         <p className="small faint" style={{ marginTop: 8, marginBottom: 0 }}>
           <strong>Задгай</strong> — бичиж бодох, зөв хариулт таарвал автоматаар оноо, буруу бол AI бодолтыг үнэлж тайлбарлана. <strong>Тест</strong> — 4 сонголтоос 1 зөв, шууд автоматаар дүгнэнэ.
         </p>
