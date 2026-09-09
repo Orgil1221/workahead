@@ -75,6 +75,52 @@ export default function AdminImport() {
     finally { setBusy(false); }
   };
 
+  const PROMPT = `ЧИ НЬ ШАЛГАЛТЫН МАТЕРИАЛЫГ JSON РУУ ХӨРВҮҮЛЭГЧ БОЛОН БОДОГЧ AI.
+
+АЖИЛ: Би материал (текст/зураг/PDF) өгнө. Чи ялгаж, ӨӨРӨӨ БОДОЖ зөв хариултыг тооцоолж, доорх SCHEMA-аар ЗӨВХӨН JSON гаргана.
+
+SCHEMA:
+{
+  "exam_id": "kebab-case-slug",
+  "title": "Хичээлийн нэр — Шалгалтын төрөл (он)",
+  "year": 2026, "source": "...", "variant": "Variant B", "durationMin": 90,
+  "questions": [{
+    "type": "open",
+    "prompt": "Асуулт $...$ LaTeX",
+    "model_solution": "Алхамчилсан бодолт $...$",
+    "answer": "1 зөв хариу $...$",
+    "choices": [
+      {"key":"A","text":"..."},
+      {"key":"B","text":"..."},
+      {"key":"C","text":"..."},
+      {"key":"D","text":"..."}
+    ],
+    "correct_choice": "A",
+    "explanation": "Яагаад A зөв, B/C/D буруу",
+    "points": 3, "topic":"Интеграл", "tags":["Интеграл"], "level":"medium", "needs_review": false
+  }]
+}
+
+ДҮРЭМ — 2 ГОРИМ ХОЁУЛ АСУУДАЛГҮЙ:
+- LaTeX зөвхөн $...$.
+- Асуулт бүрд 2-уулаа: model_solution+answer (Задгайд AI) + choices[4] (3 буруу+1 зөв)+correct_choice+explanation (Тестэд 4 товч). Test: choices дарааллыг ямар ч санамсаргүй өг — систем шалгалт өгөх тоолонд per-attempt shuffle хийж байрлал өөрчилнө, зөв хариулт дагана.
+- exam_id давтагдашгүй.
+
+ОДОО: Доорх материалаас JSON үүсгэ. Зөвхөн JSON:
+[ЭНД шалгалтын текст/зураг наа]`;
+
+  const [promptCopied, setPromptCopied] = useState(false);
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(PROMPT);
+      setPromptCopied(true);
+      toast('Prompt хууллаа — Claude-д наа');
+      setTimeout(() => setPromptCopied(false), 2000);
+    } catch {
+      toast('Хуулах амжилтгүй — гараар хуулна уу');
+    }
+  };
+
   return (
     <>
       <div className="page-title-row"><h1>Контент импорт</h1></div>
@@ -97,6 +143,20 @@ export default function AdminImport() {
           асуулт бүр <span className="mono">{`{ type, prompt, model_solution, answer, points, needs_review, tags }`}</span>.
           Ижил <span className="mono">exam_id</span>-тай бол шинэчлэн оршино.
         </p>
+      </div>
+
+      <div className="card" style={{ borderLeft: '3px solid var(--blue-ink)' }}>
+        <h3 style={{ marginTop: 0 }}>Claude-д өгөх Prompt — Test (4 хариу) + Задгай (1 зөв) 2 горим</h3>
+        <p className="small muted" style={{ marginTop: 4 }}>
+          Шалгалтын материалаа Claude-д өгч JSON болгуулахдаа энэ prompt-ыг хуулж хэрэглэнэ. `3 буруу + 1 зөв` Тест + `1 зөв` Задгай 2-уулаа агуулсан 1 JSON гарч, 2 горим хоёул `AUTO/AI` + `per-attempt random` асуудалгүй ажиллана.
+        </p>
+        <textarea readOnly rows={7} className="mono small" style={{ background: 'rgba(37,99,235,0.04)', cursor: 'default' }} value={PROMPT} onFocus={(e) => e.target.select()} />
+        <div className="btn-row" style={{ marginTop: 10 }}>
+          <button className={`btn small ${promptCopied ? 'secondary' : ''}`} onClick={copyPrompt}>
+            {promptCopied ? '✓ Хууллаа' : '📋 Prompt хуулах'}
+          </button>
+          <span className="small faint" style={{ alignSelf: 'center' }}>Claude → SYSTEM + USER prompt болгон наа → материалаа хавсарга → JSON гарна</span>
+        </div>
       </div>
 
       <div className="card">
