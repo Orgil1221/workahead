@@ -11,8 +11,16 @@ export default function Register() {
   const [needVerify, setNeedVerify] = useState(null); // {email, token}
   const [otp, setOtp] = useState('');
   const [otpBusy, setOtpBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // 60s cooldown timer for "Code ilgeeh" button
+  useEffect(() => {
+    if (!needVerify || cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((c) => (c <= 1 ? 0 : c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [needVerify, cooldown]);
 
   useEffect(() => {
     api('/programs-public')
@@ -48,6 +56,7 @@ export default function Register() {
       login(data.token, data.user);
       if (data.needVerify) {
         setNeedVerify({ email: form.email, token: data.token });
+        setCooldown(60);
         setError(null);
       } else {
         navigate('/student');
@@ -71,11 +80,13 @@ export default function Register() {
   };
 
   const resendOtp = async () => {
+    if (cooldown > 0) return;
     setOtpBusy(true);
     setError(null);
     try {
       await api('/auth/send-otp', { method: 'POST', body: { email: needVerify.email } });
       setError(null);
+      setCooldown(60);
       alert('OTP дахин илгээлээ — мэйлээ шалгана уу (10 минут хүчинтэй)');
     } catch (err) { setError(err.message); } finally { setOtpBusy(false); }
   };
@@ -96,7 +107,9 @@ export default function Register() {
             <button className="btn" style={{ width: '100%', marginTop: 16 }} disabled={otpBusy}>
               {otpBusy ? 'Шалгаж байна…' : 'Баталгаажуулах'}
             </button>
-            <button type="button" className="btn secondary" style={{ width: '100%', marginTop: 8 }} disabled={otpBusy} onClick={resendOtp}>Дахин илгээх</button>
+            <button type="button" className="btn secondary" style={{ width: '100%', marginTop: 8 }} disabled={otpBusy || cooldown > 0} onClick={resendOtp}>
+              {cooldown > 0 ? `Дахин илгээх (${cooldown}s)` : 'Code илгээх'}
+            </button>
             <p className="small muted" style={{ textAlign: 'center', margin: '12px 0 0' }}>
               <a href="#" onClick={(e) => { e.preventDefault(); setNeedVerify(null); }}>Буцах</a>
             </p>

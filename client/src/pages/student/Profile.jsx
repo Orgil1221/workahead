@@ -27,8 +27,6 @@ export default function Profile() {
     } catch { return true; }
   });
   const [payModalPlan, setPayModalPlan] = useState(null);
-  const [otp, setOtp] = useState('');
-  const [otpBusy, setOtpBusy] = useState(false);
 
   useEffect(() => {
     api('/payments/plans').then((d) => setPlans(d.plans)).catch(() => setPlans([]));
@@ -122,10 +120,6 @@ export default function Profile() {
 
   async function buy(plan) {
     if (busy) return;
-    if (!user.isVerified) {
-      toast('Мэйлээ эхлээд OTP-гөөр баталгаажуулна уу');
-      return;
-    }
     setBusy(true);
     try {
       const d = await api('/payments/checkout', { method: 'POST', body: { planId: plan.id } });
@@ -134,24 +128,6 @@ export default function Profile() {
       toast(e.message);
       setBusy(false);
     }
-  }
-
-  async function sendOtp() {
-    setOtpBusy(true);
-    try {
-      await api('/auth/send-otp', { method: 'POST', body: { email: user.email } });
-      toast('OTP илгээлээ — мэйлээ шалгана уу');
-    } catch (e) { toast(e.message); } finally { setOtpBusy(false); }
-  }
-  async function verifyOtp() {
-    if (!otp.trim()) return toast('OTP оруулна уу');
-    setOtpBusy(true);
-    try {
-      const d = await api('/auth/verify-otp', { method: 'POST', body: { email: user.email, otp: otp.trim() } });
-      updateUser(d.user);
-      toast('Мэйл баталгаажлаа');
-      setOtp('');
-    } catch (e) { toast(e.message); } finally { setOtpBusy(false); }
   }
 
   if (!user) return null;
@@ -177,38 +153,15 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
-        <span className="small muted" style={{ marginRight: 4 }}>Холбоо барих:</span>
-        <a href="tel:+97666336691" aria-label="Call +976 66336691" className="icon-btn" style={{ background: 'var(--paper)', border: '1px solid var(--rule)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, justifyContent: 'flex-start' }}>
+        <a href="tel:+97666336691" aria-label="Call +976 66336691" className="icon-btn" style={{ background: 'var(--paper)', border: '1px solid var(--rule)', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
         </a>
-        <a href="tel:+97666336691" className="small mono" style={{ textDecoration: 'none', color: 'var(--ink)', fontWeight: 500 }}>+976 66336691</a>
-        <span style={{ flex: 1 }} />
-        <a href="https://www.facebook.com/profile.php?id=100068091317280" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="icon-btn" style={{ background: '#1877F2', color: 'white', border: 'none', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
+        <a href="https://www.facebook.com/profile.php?id=100068091317280" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="icon-btn" style={{ background: '#1877F2', color: 'white', border: 'none', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
         </a>
-        <a href="https://www.facebook.com/profile.php?id=100068091317280" target="_blank" rel="noopener noreferrer" className="small" style={{ textDecoration: 'none', color: '#1877F2', fontWeight: 600 }}>Facebook</a>
+        <span className="small muted" style={{ marginLeft: 4 }}>WorkAhead • <a href="tel:+97666336691" style={{ color: 'var(--ink-soft)', textDecoration: 'none' }}>+976 66336691</a></span>
       </div>
-
-      {!user.isVerified && (
-        <div className="card" style={{ borderLeft: '3px solid var(--warn)', background: 'rgba(160,107,0,.06)', marginTop: 12 }}>
-          <h3 style={{ margin: 0, color: 'var(--warn)', fontSize: '1rem' }}>Мэйл баталгаажуулалт шаардлагатай</h3>
-          <p className="small muted" style={{ margin: '6px 0 10px', lineHeight: 1.5 }}>
-            Төлбөр хийхээс өмнө <strong>{user.email}</strong> мэйлээ OTP-гөөр баталгаажуулна уу. Business mail (Resend) тохиргоогүй бол код server log-д харагдана.
-          </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <input placeholder="123456" value={otp} onChange={(e) => setOtp(e.target.value)} className="mono" style={{ flex: '1 1 120px', textAlign: 'center', letterSpacing: 4, fontSize: '1.1rem' }} maxLength={6} />
-            <button className="btn small" disabled={otpBusy} onClick={verifyOtp}>Баталгаажуулах</button>
-            <button className="btn secondary small" disabled={otpBusy} onClick={sendOtp}>Дахин илгээх</button>
-          </div>
-        </div>
-      )}
-      {user.isVerified && (
-        <div className="small" style={{ marginTop: 12, color: 'var(--ok)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span className="badge ok">✓ Мэйл баталгаажсан</span>
-          <span className="small muted">{user.email}</span>
-        </div>
-      )}
 
       <div className="profile-section-title">Холбоо барих мэдээлэл</div>
       {!editing ? (
@@ -425,6 +378,17 @@ export default function Profile() {
       <button className="btn danger profile-logout" onClick={logout}>
         Гарах
       </button>
+
+      <footer style={{ textAlign: 'center', padding: '24px 16px 12px', fontSize: '.78rem', color: 'var(--ink-faint)', borderTop: '1px solid var(--rule)', marginTop: 32 }}>
+        <div>© 2026 WorkAhead. All rights reserved.</div>
+        <div style={{ marginTop: 4 }}>
+          <a href="/terms" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Гэрээ</a>
+          <span style={{ margin: '0 8px' }}>·</span>
+          <a href="/delivery" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Хүргэлт</a>
+          <span style={{ margin: '0 8px' }}>·</span>
+          <a href="https://www.facebook.com/profile.php?id=100068091317280" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Facebook</a>
+        </div>
+      </footer>
     </>
   );
 }
