@@ -11,7 +11,10 @@ export async function requireAuth(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      include: { program: { select: { id: true, name: true, school: true, code: true } } },
+      include: {
+        program: { select: { id: true, name: true, school: true, code: true } },
+        academicProgram: { select: { id: true, name: true, school: true, code: true, university: true } },
+      },
     });
     if (!user) return res.status(401).json({ error: 'Хэрэглэгч олдсонгүй' });
     req.user = user;

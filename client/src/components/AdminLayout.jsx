@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 const links = [
   { to: '/admin', label: 'Статистик', end: true },
   { to: '/admin/catalog', label: 'Бүтэц (Сургууль/Шалгалт)' },
+  { to: '/admin/academic-programs', label: 'Бүртгэлийн салбар/хөтөлбөр' },
   { to: '/admin/questions', label: 'Асуултын сан' },
   { to: '/admin/import', label: 'Контент импорт' },
   { to: '/admin/reports', label: 'Reports' },

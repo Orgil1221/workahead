@@ -18,6 +18,7 @@ import adminStatsRoutes from './routes/admin/stats.js';
 import adminUserRoutes from './routes/admin/users.js';
 import adminImportRoutes from './routes/admin/import.js';
 import adminPlanRoutes from './routes/admin/plans.js';
+import { academicRouter, academicAdminRouter } from './routes/academic.js';
 
 const app = express();
 app.use(helmet({
@@ -60,6 +61,7 @@ app.use((req, res, next) => {
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRoutes);
+app.use('/api', academicRouter);
 app.use('/api', catalogRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/attempts', attemptRoutes);
@@ -72,6 +74,7 @@ app.use('/api/admin/stats', adminStatsRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/import', adminImportRoutes);
 app.use('/api/admin/plans', adminPlanRoutes);
+app.use('/api/admin/academic-programs', academicAdminRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

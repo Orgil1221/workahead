@@ -11,6 +11,7 @@ import StudentLayout from './components/StudentLayout.jsx';
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard.jsx';
 import AdminCatalog from './pages/admin/Catalog.jsx';
+import AdminAcademicPrograms from './pages/admin/AcademicPrograms.jsx';
 import AdminQuestions from './pages/admin/Questions.jsx';
 import AdminImport from './pages/admin/Import.jsx';
 import AdminReports from './pages/admin/Reports.jsx';
@@ -147,6 +148,7 @@ export default function App() {
         <Route path="/admin" element={<Guard admin><AdminLayout /></Guard>}>
           <Route index element={<AdminDashboard />} />
           <Route path="catalog" element={<AdminCatalog />} />
+          <Route path="academic-programs" element={<AdminAcademicPrograms />} />
           <Route path="questions" element={<AdminQuestions />} />
           <Route path="import" element={<AdminImport />} />
           <Route path="reports" element={<AdminReports />} />

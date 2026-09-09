@@ -50,10 +50,10 @@ export default function Profile() {
   }, []);
 
   function startEdit() {
-    const prog = programs.find((p) => p.id === user.program?.id);
-    setForm({ name: user.name || '', phone: user.phone || '', programId: user.program?.id || '', school: prog?.school || prog?.universityName || '', customProgram: '' });
+    const prog = programs.find((p) => p.id === (user.academicProgram?.id || user.program?.id));
+    setForm({ name: user.name || '', phone: user.phone || '', programId: (user.academicProgram?.id || user.program?.id || ''), school: prog?.school || '', customProgram: '' });
     if (programs.length === 0) {
-      api('/programs-public').then((d) => setPrograms(d.programs)).catch(() => {});
+      api('/academic-programs').then((d) => setPrograms(d.programs)).catch(() => {});
     }
     setEditing(true);
   }
@@ -144,8 +144,8 @@ export default function Profile() {
         </div>
         <div>
           <h2 style={{ margin: 0 }}>{user.name}</h2>
-          {user.program
-            ? <span className="badge blue">{user.program.school ? `${user.program.school} · ` : ''}{user.program.name}</span>
+          {(user.academicProgram || user.program)
+            ? <span className="badge blue">{(user.academicProgram?.school || user.program?.school) ? `${user.academicProgram?.school || user.program?.school} · ` : ''}{user.academicProgram?.name || user.program?.name}</span>
             : <span className="small muted">Мэргэжил сонгоогүй</span>}
           {plans?.some((p) => p.owned) && (
             <span className="badge plan-active" style={{ marginLeft: 6 }}>✓ Багц идэвхтэй</span>
@@ -191,11 +191,8 @@ export default function Profile() {
           <label>Утасны дугаар</label>
           <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           {(() => {
-            // Зөвхөн баталгаат мэргэжлүүд (МТЭС/БС/ХЗС/ШУС/ИТС/УТСОУХНУС) — хичээлүүдийг хасна
-            const validSchools = ['МТЭС', 'БС', 'ХЗС', 'ШУС', 'ИТС', 'УТСОУХНУС'];
-            const majorPrograms = programs.filter((p) => validSchools.includes(p.school));
-            const schools = [...new Set(majorPrograms.map((p) => p.school))].sort();
-            const filtered = majorPrograms.filter((p) => p.school === form.school);
+            const schools = [...new Set(programs.map((p) => p.school))].sort();
+            const filtered = programs.filter((p) => p.school === form.school);
             return (
               <>
                 <label>Салбар сургууль</label>

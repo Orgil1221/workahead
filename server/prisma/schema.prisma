@@ -48,6 +48,23 @@ model Program {
   @@index([universityId])
 }
 
+// Бүртгэлийн салбар сургууль / хөтөлбөр — шалгалтын Program-аас тусдаа
+model AcademicProgram {
+  id         String   @id @default(cuid())
+  university String   // жишээ: МУИС
+  school     String   // жишээ: МТЭС, ХУС, ИТС
+  name       String   // жишээ: Нягтлан бодох, Программ хангамж
+  code       String?  // жишээ: ACC101
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  students User[] @relation("AcademicProgramStudents")
+
+  @@unique([university, school, name])
+  @@index([school])
+  @@index([university])
+}
+
 model Exam {
   id        String   @id @default(cuid())
   programId String
@@ -111,19 +128,21 @@ model EmailOtp {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  name         String
-  phone        String?
-  role         Role      @default(STUDENT)
-  programId    String?
-  isVerified   Boolean   @default(false)
-  verifyOtp    String?
-  verifyExpires DateTime?
-  createdAt    DateTime  @default(now())
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String
+  name                String
+  phone               String?
+  role                Role      @default(STUDENT)
+  programId           String?
+  academicProgramId   String?
+  isVerified          Boolean   @default(false)
+  verifyOtp           String?
+  verifyExpires       DateTime?
+  createdAt           DateTime  @default(now())
 
-  program       Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
+  program             Program?         @relation(fields: [programId], references: [id], onDelete: SetNull)
+  academicProgram     AcademicProgram? @relation("AcademicProgramStudents", fields: [academicProgramId], references: [id], onDelete: SetNull)
   flags         Flag[]
   bookmarks     Bookmark[]
   attempts      TestAttempt[]

@@ -23,7 +23,7 @@ export default function Register() {
   }, [cooldown]);
 
   useEffect(() => {
-    api('/programs-public')
+    api('/academic-programs')
       .then((d) => setPrograms(d.programs))
       .catch(() => {});
   }, []);
@@ -37,11 +37,9 @@ export default function Register() {
     setForm((f) => ({ ...f, programId: v, customProgram: v === '__custom__' ? f.customProgram : '' }));
   };
 
-  // Зөвхөн баталгаат 40 мэргэжил (МТЭС/БС/ХЗС/ШУС/ИТС/УТСОУХНУС) харуулна — хичээлүүдийг хасна
-  const validSchools = ['МТЭС', 'БС', 'ХЗС', 'ШУС', 'ИТС', 'УТСОУХНУС'];
-  const majorPrograms = programs.filter((p) => validSchools.includes(p.school));
-  const schools = [...new Set(majorPrograms.map((p) => p.school))].sort();
-  const schoolPrograms = majorPrograms.filter((p) => p.school === form.school);
+  // AcademicProgram — шалгалтын Program-аас тусдаа, МУИС салбар/хөтөлбөр
+  const schools = [...new Set(programs.map((p) => p.school))].sort();
+  const schoolPrograms = programs.filter((p) => p.school === form.school);
   const isCustom = form.programId === '__custom__';
 
   const sendRegisterOtp = async () => {

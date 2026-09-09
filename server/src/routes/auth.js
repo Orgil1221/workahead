@@ -77,13 +77,17 @@ router.post('/register', authLimiter, validate(registerSchema), async (req, res,
     if (!stored || !stored.otp) return res.status(400).json({ error: 'OTP үүсээгүй — Code илгээх дарна уу' });
     if (new Date() > new Date(stored.expires)) return res.status(400).json({ error: 'OTP хугацаа дууссан — дахин илгээнэ үү' });
     if (String(stored.otp) !== String(otp).trim()) return res.status(400).json({ error: 'OTP буруу' });
-    const finalProgramId = await resolveProgramId({ programId, customProgram, school });
-    if (customProgram?.trim() && !finalProgramId)
+    // Бүртгэлийн салбар/хөтөлбөр — AcademicProgram (шалгалтын Program-аас тусдаа)
+    const finalAcademicId = await resolveAcademicProgramId({ programId, customProgram, school });
+    if (customProgram?.trim() && !finalAcademicId)
       return res.status(400).json({ error: 'Мэргэжил үүсгэж чадсангүй — дахин оролдоно уу' });
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, passwordHash, name, role: 'STUDENT', programId: finalProgramId, isVerified: true },
-      include: { program: { select: { id: true, name: true, school: true, code: true } } },
+      data: { email, passwordHash, name, role: 'STUDENT', academicProgramId: finalAcademicId, isVerified: true },
+      include: {
+        program: { select: { id: true, name: true, school: true, code: true } },
+        academicProgram: { select: { id: true, name: true, school: true, code: true, university: true } },
+      },
     });
     await prisma.emailOtp.delete({ where: { email } }).catch(() => {});
     const token = sign(user);
@@ -97,7 +101,10 @@ router.post('/login', authLimiter, validate(loginSchema), async (req, res, next)
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { program: { select: { id: true, name: true, school: true, code: true } } },
+      include: {
+        program: { select: { id: true, name: true, school: true, code: true } },
+        academicProgram: { select: { id: true, name: true, school: true, code: true, university: true } },
+      },
     });
     if (!user || !(await bcrypt.compare(password, user.passwordHash)))
       return res.status(401).json({ error: 'Имэйл эсвэл нууц үг буруу' });
@@ -158,6 +165,7 @@ const profileSchema = z.object({
     name: z.string().min(2).max(60).optional(),
     phone: z.string().max(20).nullable().optional(),
     programId: z.string().min(1).max(60).nullable().optional().or(z.literal('')),
+    academicProgramId: z.string().min(1).max(60).nullable().optional().or(z.literal('')),
     customProgram: z.string().min(2, 'Мэргэжлийн нэр хамгийн багадаа 2 тэмдэгт').max(80).optional(),
     school: z.string().max(30).optional(),
   }),
@@ -184,6 +192,28 @@ async function resolveProgramId({ programId, customProgram, school }) {
   });
   return created.id;
 }
+
+async function resolveAcademicProgramId({ programId, customProgram, school }) {
+  // Шинэ AcademicProgram (бүртгэлийн салбар/хөтөлбөр) — шалгалтын Program-аас тусдаа
+  if (programId) {
+    const p = await prisma.academicProgram.findUnique({ where: { id: programId } });
+    if (p) return p.id;
+    // Fallback: хуучин Program ID байж магадгүй
+    const old = await prisma.program.findUnique({ where: { id: programId } });
+    if (old) return null;
+    return null;
+  }
+  const name = customProgram?.trim();
+  if (!name) return null;
+  const sch = school?.trim() || null;
+  const uni = 'МУИС';
+  const existing = await prisma.academicProgram.findFirst({ where: { university: uni, school: sch, name } });
+  if (existing) return existing.id;
+  const created = await prisma.academicProgram.create({
+    data: { university: uni, school: sch, name, order: 0 },
+  });
+  return created.id;
+}
 const passwordSchema = z.object({
   body: z.object({
     current: z.string().min(1, 'Одоогийн нууц үг шаардлагатай'),
@@ -193,20 +223,26 @@ const passwordSchema = z.object({
 
 router.put('/profile', requireAuth, validate(profileSchema), async (req, res, next) => {
   try {
-    const { name, phone, programId, customProgram, school } = req.body || {};
+    const { name, phone, programId, academicProgramId, customProgram, school } = req.body || {};
     const data = {};
     if (name?.trim()) data.name = name.trim();
     if (phone !== undefined) data.phone = phone?.trim() || null;
-    if (programId !== undefined || customProgram !== undefined) {
-      const finalProgramId = await resolveProgramId({ programId, customProgram, school });
-      if (customProgram?.trim() && !finalProgramId)
+    // Шинэ AcademicProgram (бүртгэлийн салбар/хөтөлбөр) — шалгалтын Program-аас тусдаа
+    const progId = academicProgramId || programId;
+    if (progId !== undefined || customProgram !== undefined) {
+      const finalAcademicId = await resolveAcademicProgramId({ programId: progId, customProgram, school });
+      if (customProgram?.trim() && !finalAcademicId)
         return res.status(400).json({ error: 'Мэргэжил үүсгэж чадсангүй — дахин оролдоно уу' });
-      data.programId = finalProgramId;
+      data.academicProgramId = finalAcademicId;
+      data.programId = null;
     }
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data,
-      include: { program: { select: { id: true, name: true, school: true, code: true } } },
+      include: {
+        program: { select: { id: true, name: true, school: true, code: true } },
+        academicProgram: { select: { id: true, name: true, school: true, code: true, university: true } },
+      },
     });
     res.json({ user: safe(user) });
   } catch (e) { next(e); }

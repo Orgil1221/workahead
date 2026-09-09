@@ -130,6 +130,18 @@ async function main() {
   }
   console.log(`  ✓ ${majors.length} мэргэжил (МТЭС/БС/ХЗС/ШУС/ИТС/УТСОУХНУС) шинэчлэгдлээ`);
 
+  // --- Бүртгэлийн AcademicProgram — шалгалтын Program-аас тусдаа ---
+  for (let i = 0; i < majors.length; i++) {
+    const m = majors[i];
+    await prisma.academicProgram.upsert({
+      where: { university_school_name: { university: 'МУИС', school: m.school, name: m.name } },
+      update: { code: m.code, order: i + 1 },
+      create: { university: 'МУИС', school: m.school, name: m.name, code: m.code, order: i + 1 },
+    });
+  }
+  const acadCount = await prisma.academicProgram.count();
+  console.log(`  ✓ AcademicProgram (бүртгэлийн салбар/хөтөлбөр) ${acadCount} — шалгалтын Program-аас тусдаа`);
+
   await prisma.user.upsert({
     where: { email: 'admin@workahead.mn' },
     update: { isVerified: true },
