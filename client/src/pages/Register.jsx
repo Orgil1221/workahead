@@ -15,12 +15,12 @@ export default function Register() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // 60s cooldown timer for "Code ilgeeh" button
+  // 60s cooldown timer for "Code ilgeeh" button (burtguuleh uyd)
   useEffect(() => {
-    if (!needVerify || cooldown <= 0) return;
+    if (cooldown <= 0) return;
     const t = setInterval(() => setCooldown((c) => (c <= 1 ? 0 : c - 1)), 1000);
     return () => clearInterval(t);
-  }, [needVerify, cooldown]);
+  }, [cooldown]);
 
   useEffect(() => {
     api('/programs-public')
@@ -44,23 +44,36 @@ export default function Register() {
   const schoolPrograms = majorPrograms.filter((p) => p.school === form.school);
   const isCustom = form.programId === '__custom__';
 
+  const sendRegisterOtp = async () => {
+    if (!form.email || !form.email.includes('@')) {
+      setError('Эхлээд имэйлээ зөв оруулна уу');
+      return;
+    }
+    if (cooldown > 0) return;
+    setOtpBusy(true);
+    setError(null);
+    try {
+      await api('/auth/send-register-otp', { method: 'POST', body: { email: form.email } });
+      setCooldown(60);
+      setError(null);
+    } catch (err) { setError(err.message); } finally { setOtpBusy(false); }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
+    if (!otp.trim()) {
+      setError('OTP код оруулна уу — Code илгээх дарж мэйлээ баталгаажуулна уу');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const body = isCustom
-        ? { name: form.name, email: form.email, password: form.password, school: form.school, customProgram: form.customProgram }
-        : { name: form.name, email: form.email, password: form.password, programId: form.programId || undefined };
+        ? { name: form.name, email: form.email, password: form.password, school: form.school, customProgram: form.customProgram, otp: otp.trim() }
+        : { name: form.name, email: form.email, password: form.password, programId: form.programId || undefined, otp: otp.trim() };
       const data = await api('/auth/register', { method: 'POST', body });
       login(data.token, data.user);
-      if (data.needVerify) {
-        setNeedVerify({ email: form.email, token: data.token });
-        setCooldown(60);
-        setError(null);
-      } else {
-        navigate('/student');
-      }
+      navigate('/student');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -129,6 +142,16 @@ export default function Register() {
           <input id="name" required value={form.name} onChange={set('name')} />
           <label htmlFor="email">Имэйл</label>
           <input id="email" type="email" required value={form.email} onChange={set('email')} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 8 }}>
+            <div style={{ flex: 1 }}>
+              <label htmlFor="otp" style={{ marginTop: 0 }}>OTP код *</label>
+              <input id="otp" required minLength={6} maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" className="mono" style={{ letterSpacing: 3, textAlign: 'center' }} />
+            </div>
+            <button type="button" className="btn secondary small" style={{ height: 38, whiteSpace: 'nowrap', marginBottom: 1 }} disabled={otpBusy || cooldown > 0 || !form.email.includes('@')} onClick={sendRegisterOtp}>
+              {cooldown > 0 ? `${cooldown}s` : 'Code илгээх'}
+            </button>
+          </div>
+          <p className="small faint" style={{ margin: '4px 0 0' }}>Имэйлээ оруулаад <strong>Code илгээх</strong> дарна — 6 оронтой код 10 минут хүчинтэй, 1 мин тутамд 1 удаа илгээнэ.</p>
           <label htmlFor="password">Нууц үг</label>
           <input id="password" type="password" required minLength={6} value={form.password} onChange={set('password')} />
           <label htmlFor="school">Салбар сургууль</label>

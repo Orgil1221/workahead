@@ -54,7 +54,7 @@ const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
 app.get('/api/auth/csrf', (req, res) => res.json({ csrfToken: generateCsrfToken(req, res) }));
 // Webhook uses HMAC, not CSRF — skip; login/register/logout/otp need no CSRF before auth
 app.use((req, res, next) => {
-  if (req.path === '/api/payments/webhook' || req.path === '/api/auth/login' || req.path === '/api/auth/register' || req.path === '/api/auth/csrf' || req.path === '/api/auth/logout' || req.path === '/api/auth/send-otp' || req.path === '/api/auth/verify-otp') return next();
+  if (req.path === '/api/payments/webhook' || req.path === '/api/auth/login' || req.path === '/api/auth/register' || req.path === '/api/auth/csrf' || req.path === '/api/auth/logout' || req.path === '/api/auth/send-otp' || req.path === '/api/auth/verify-otp' || req.path === '/api/auth/send-register-otp') return next();
   return doubleCsrfProtection(req, res, next);
 });
 

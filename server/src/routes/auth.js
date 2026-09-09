@@ -34,9 +34,9 @@ const registerSchema = z.object({
     password: z.string().min(8, 'Нууц үг хамгийн багадаа 8 тэмдэгт').max(72),
     name: z.string().min(2, 'Нэр хамгийн багадаа 2 тэмдэгт').max(60),
     programId: z.string().min(1).max(60).nullable().optional().or(z.literal('')),
-    // Жагсаалтад байхгүй мэргэжлийг өөрөө бичих сонголт
     customProgram: z.string().min(2, 'Мэргэжлийн нэр хамгийн багадаа 2 тэмдэгт').max(80).optional(),
     school: z.string().max(30).optional(),
+    otp: z.string().min(6).max(6).optional(),
   }),
 });
 const loginSchema = z.object({
@@ -46,26 +46,47 @@ const loginSchema = z.object({
   }),
 });
 
-router.post('/register', authLimiter, validate(registerSchema), async (req, res, next) => {
+// Pre-registration OTP — business mail (Resend) 60s cooldown, 10min expiry
+router.post('/send-register-otp', authLimiter, validate(otpSendSchema), async (req, res, next) => {
   try {
-    const { email, password, name, programId, customProgram, school } = req.body;
+    const { email } = req.body;
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return res.status(409).json({ error: 'Энэ имэйл бүртгэлтэй байна' });
+    const existing = await prisma.emailOtp.findUnique({ where: { email } });
+    if (existing && new Date(existing.expires).getTime() - Date.now() > 9 * 60 * 1000) {
+      return res.status(429).json({ error: '1 минутын дараа дахин илгээнэ үү' });
+    }
+    const otp = generateOtp();
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+    await prisma.emailOtp.upsert({ where: { email }, update: { otp, expires }, create: { email, otp, expires } });
+    await sendOtpEmail(email, otp);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+router.post('/register', authLimiter, validate(registerSchema), async (req, res, next) => {
+  try {
+    const { email, password, name, programId, customProgram, school, otp } = req.body;
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) return res.status(409).json({ error: 'Энэ имэйл бүртгэлтэй байна' });
+    // OTP заавал — бүртгүүлэх үед мэйл баталгаажуулна
+    if (!otp) return res.status(400).json({ error: 'OTP код оруулна уу — Code илгээх дарж мэйлээ баталгаажуулна уу' });
+    const stored = await prisma.emailOtp.findUnique({ where: { email } });
+    if (!stored || !stored.otp) return res.status(400).json({ error: 'OTP үүсээгүй — Code илгээх дарна уу' });
+    if (new Date() > new Date(stored.expires)) return res.status(400).json({ error: 'OTP хугацаа дууссан — дахин илгээнэ үү' });
+    if (String(stored.otp) !== String(otp).trim()) return res.status(400).json({ error: 'OTP буруу' });
     const finalProgramId = await resolveProgramId({ programId, customProgram, school });
     if (customProgram?.trim() && !finalProgramId)
       return res.status(400).json({ error: 'Мэргэжил үүсгэж чадсангүй — дахин оролдоно уу' });
     const passwordHash = await bcrypt.hash(password, 10);
-    const otp = generateOtp();
-    const verifyExpires = new Date(Date.now() + 10 * 60 * 1000);
     const user = await prisma.user.create({
-      data: { email, passwordHash, name, role: 'STUDENT', programId: finalProgramId, isVerified: false, verifyOtp: otp, verifyExpires },
+      data: { email, passwordHash, name, role: 'STUDENT', programId: finalProgramId, isVerified: true },
       include: { program: { select: { id: true, name: true, school: true, code: true } } },
     });
-    // Business mail OTP — async, don't block register on failure
-    sendOtpEmail(email, otp).catch((e) => console.error('OTP send failed:', e.message));
+    await prisma.emailOtp.delete({ where: { email } }).catch(() => {});
     const token = sign(user);
     setAuthCookie(res, token);
-    res.status(201).json({ token, user: safe(user), needVerify: true });
+    res.status(201).json({ token, user: safe(user) });
   } catch (e) { next(e); }
 });
 

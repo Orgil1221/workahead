@@ -102,6 +102,14 @@ model Question {
   @@index([year])
 }
 
+model EmailOtp {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  otp       String
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
