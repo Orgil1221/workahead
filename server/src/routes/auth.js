@@ -45,6 +45,8 @@ const loginSchema = z.object({
     password: z.string().min(1, 'Нууц үг шаардлагатай'),
   }),
 });
+const otpSendSchema = z.object({ body: z.object({ email: z.string().email('Имэйл буруу') }) });
+const otpVerifySchema = z.object({ body: z.object({ email: z.string().email('Имэйл буруу'), otp: z.string().min(6).max(6) }) });
 
 // Pre-registration OTP — business mail (Resend) 60s cooldown, 10min expiry
 router.post('/send-register-otp', authLimiter, validate(otpSendSchema), async (req, res, next) => {
@@ -104,9 +106,6 @@ router.post('/login', authLimiter, validate(loginSchema), async (req, res, next)
     res.json({ token, user: safe(user) });
   } catch (e) { next(e); }
 });
-
-const otpSendSchema = z.object({ body: z.object({ email: z.string().email('Имэйл буруу') }) });
-const otpVerifySchema = z.object({ body: z.object({ email: z.string().email('Имэйл буруу'), otp: z.string().min(6).max(6) }) });
 
 // OTP дахин илгээх — 1 минут тутамд 1 удаа
 router.post('/send-otp', authLimiter, validate(otpSendSchema), async (req, res, next) => {
