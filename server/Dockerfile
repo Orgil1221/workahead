@@ -8,4 +8,4 @@ RUN npx prisma generate
 COPY src ./src
 COPY scripts ./scripts
 EXPOSE 4000
-CMD ["node", "src/index.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss || true; node src/index.js"]

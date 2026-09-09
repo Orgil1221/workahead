@@ -46,6 +46,9 @@ router.get('/plans', requireAuth, async (req, res, next) => {
 router.post('/checkout', requireAuth, rateLimitFlexible('checkout'), validate(checkoutSchema), async (req, res, next) => {
   try {
     const { planId } = req.body || {};
+    if (!req.user.isVerified) {
+      return res.status(403).json({ error: 'Мэйлээ баталгаажуулна уу — Профайл → OTP баталгаажуулалт', code: 'EMAIL_NOT_VERIFIED' });
+    }
     const plan = await prisma.plan.findFirst({ where: { id: planId, active: true } });
     if (!plan) return res.status(404).json({ error: 'Багц олдсонгүй' });
 

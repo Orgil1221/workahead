@@ -6,6 +6,7 @@ import prisma from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { rateLimitFlexible } from '../middleware/rateLimitFlexible.js';
 import { validate } from '../middleware/validate.js';
+import { generateOtp, sendOtpEmail } from '../services/email.js';
 
 const router = Router();
 const authLimiter = rateLimitFlexible('auth');
@@ -54,13 +55,17 @@ router.post('/register', authLimiter, validate(registerSchema), async (req, res,
     if (customProgram?.trim() && !finalProgramId)
       return res.status(400).json({ error: 'Мэргэжил үүсгэж чадсангүй — дахин оролдоно уу' });
     const passwordHash = await bcrypt.hash(password, 10);
+    const otp = generateOtp();
+    const verifyExpires = new Date(Date.now() + 10 * 60 * 1000);
     const user = await prisma.user.create({
-      data: { email, passwordHash, name, role: 'STUDENT', programId: finalProgramId },
+      data: { email, passwordHash, name, role: 'STUDENT', programId: finalProgramId, isVerified: false, verifyOtp: otp, verifyExpires },
       include: { program: { select: { id: true, name: true, school: true, code: true } } },
     });
+    // Business mail OTP — async, don't block register on failure
+    sendOtpEmail(email, otp).catch((e) => console.error('OTP send failed:', e.message));
     const token = sign(user);
     setAuthCookie(res, token);
-    res.status(201).json({ token, user: safe(user) });
+    res.status(201).json({ token, user: safe(user), needVerify: true });
   } catch (e) { next(e); }
 });
 
@@ -76,6 +81,48 @@ router.post('/login', authLimiter, validate(loginSchema), async (req, res, next)
     const token = sign(user);
     setAuthCookie(res, token);
     res.json({ token, user: safe(user) });
+  } catch (e) { next(e); }
+});
+
+const otpSendSchema = z.object({ body: z.object({ email: z.string().email('Имэйл буруу') }) });
+const otpVerifySchema = z.object({ body: z.object({ email: z.string().email('Имэйл буруу'), otp: z.string().min(6).max(6) }) });
+
+// OTP дахин илгээх — 1 минут тутамд 1 удаа
+router.post('/send-otp', authLimiter, validate(otpSendSchema), async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'Хэрэглэгч олдсонгүй' });
+    if (user.isVerified) return res.json({ ok: true, alreadyVerified: true });
+    // 1 минут дотор дахин илгээхгүй
+    if (user.verifyExpires && user.verifyOtp && new Date(user.verifyExpires).getTime() - Date.now() > 9 * 60 * 1000) {
+      return res.status(429).json({ error: '1 минутын дараа дахин илгээнэ үү' });
+    }
+    const otp = generateOtp();
+    const verifyExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await prisma.user.update({ where: { id: user.id }, data: { verifyOtp: otp, verifyExpires } });
+    await sendOtpEmail(email, otp);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+router.post('/verify-otp', authLimiter, validate(otpVerifySchema), async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'Хэрэглэгч олдсонгүй' });
+    if (user.isVerified) return res.json({ ok: true, alreadyVerified: true });
+    if (!user.verifyOtp || !user.verifyExpires) return res.status(400).json({ error: 'OTP үүсээгүй — дахин илгээнэ үү' });
+    if (new Date() > new Date(user.verifyExpires)) return res.status(400).json({ error: 'OTP хугацаа дууссан — дахин илгээнэ үү' });
+    if (String(user.verifyOtp) !== String(otp).trim()) return res.status(400).json({ error: 'OTP буруу' });
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: { isVerified: true, verifyOtp: null, verifyExpires: null },
+      include: { program: { select: { id: true, name: true, school: true, code: true } } },
+    });
+    const token = sign(updated);
+    setAuthCookie(res, token);
+    res.json({ ok: true, token, user: safe(updated) });
   } catch (e) { next(e); }
 });
 

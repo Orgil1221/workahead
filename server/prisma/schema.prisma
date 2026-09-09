@@ -110,6 +110,9 @@ model User {
   phone        String?
   role         Role      @default(STUDENT)
   programId    String?
+  isVerified   Boolean   @default(false)
+  verifyOtp    String?
+  verifyExpires DateTime?
   createdAt    DateTime  @default(now())
 
   program       Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)

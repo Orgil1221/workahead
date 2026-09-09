@@ -132,13 +132,13 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: 'admin@workahead.mn' },
-    update: {},
-    create: { email: 'admin@workahead.mn', passwordHash, name: 'Админ', role: 'ADMIN' },
+    update: { isVerified: true },
+    create: { email: 'admin@workahead.mn', passwordHash, name: 'Админ', role: 'ADMIN', isVerified: true },
   });
   const student = await prisma.user.upsert({
     where: { email: 'student@workahead.mn' },
-    update: {},
-    create: { email: 'student@workahead.mn', passwordHash: studentHash, name: 'Оюутан Тэмүүлэн', role: 'STUDENT', programId: program.id },
+    update: { isVerified: true },
+    create: { email: 'student@workahead.mn', passwordHash: studentHash, name: 'Оюутан Тэмүүлэн', role: 'STUDENT', programId: program.id, isVerified: true },
   });
 
   // --- Import seed files (files/*.json) ---

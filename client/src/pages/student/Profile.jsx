@@ -27,6 +27,8 @@ export default function Profile() {
     } catch { return true; }
   });
   const [payModalPlan, setPayModalPlan] = useState(null);
+  const [otp, setOtp] = useState('');
+  const [otpBusy, setOtpBusy] = useState(false);
 
   useEffect(() => {
     api('/payments/plans').then((d) => setPlans(d.plans)).catch(() => setPlans([]));
@@ -120,6 +122,10 @@ export default function Profile() {
 
   async function buy(plan) {
     if (busy) return;
+    if (!user.isVerified) {
+      toast('Мэйлээ эхлээд OTP-гөөр баталгаажуулна уу');
+      return;
+    }
     setBusy(true);
     try {
       const d = await api('/payments/checkout', { method: 'POST', body: { planId: plan.id } });
@@ -128,6 +134,24 @@ export default function Profile() {
       toast(e.message);
       setBusy(false);
     }
+  }
+
+  async function sendOtp() {
+    setOtpBusy(true);
+    try {
+      await api('/auth/send-otp', { method: 'POST', body: { email: user.email } });
+      toast('OTP илгээлээ — мэйлээ шалгана уу');
+    } catch (e) { toast(e.message); } finally { setOtpBusy(false); }
+  }
+  async function verifyOtp() {
+    if (!otp.trim()) return toast('OTP оруулна уу');
+    setOtpBusy(true);
+    try {
+      const d = await api('/auth/verify-otp', { method: 'POST', body: { email: user.email, otp: otp.trim() } });
+      updateUser(d.user);
+      toast('Мэйл баталгаажлаа');
+      setOtp('');
+    } catch (e) { toast(e.message); } finally { setOtpBusy(false); }
   }
 
   if (!user) return null;
@@ -165,6 +189,26 @@ export default function Profile() {
         </a>
         <a href="https://www.facebook.com/profile.php?id=100068091317280" target="_blank" rel="noopener noreferrer" className="small" style={{ textDecoration: 'none', color: '#1877F2', fontWeight: 600 }}>Facebook</a>
       </div>
+
+      {!user.isVerified && (
+        <div className="card" style={{ borderLeft: '3px solid var(--warn)', background: 'rgba(160,107,0,.06)', marginTop: 12 }}>
+          <h3 style={{ margin: 0, color: 'var(--warn)', fontSize: '1rem' }}>Мэйл баталгаажуулалт шаардлагатай</h3>
+          <p className="small muted" style={{ margin: '6px 0 10px', lineHeight: 1.5 }}>
+            Төлбөр хийхээс өмнө <strong>{user.email}</strong> мэйлээ OTP-гөөр баталгаажуулна уу. Business mail (Resend) тохиргоогүй бол код server log-д харагдана.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input placeholder="123456" value={otp} onChange={(e) => setOtp(e.target.value)} className="mono" style={{ flex: '1 1 120px', textAlign: 'center', letterSpacing: 4, fontSize: '1.1rem' }} maxLength={6} />
+            <button className="btn small" disabled={otpBusy} onClick={verifyOtp}>Баталгаажуулах</button>
+            <button className="btn secondary small" disabled={otpBusy} onClick={sendOtp}>Дахин илгээх</button>
+          </div>
+        </div>
+      )}
+      {user.isVerified && (
+        <div className="small" style={{ marginTop: 12, color: 'var(--ok)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="badge ok">✓ Мэйл баталгаажсан</span>
+          <span className="small muted">{user.email}</span>
+        </div>
+      )}
 
       <div className="profile-section-title">Холбоо барих мэдээлэл</div>
       {!editing ? (

@@ -8,6 +8,9 @@ export default function Register() {
   const [programs, setPrograms] = useState([]);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [needVerify, setNeedVerify] = useState(null); // {email, token}
+  const [otp, setOtp] = useState('');
+  const [otpBusy, setOtpBusy] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -43,13 +46,65 @@ export default function Register() {
         : { name: form.name, email: form.email, password: form.password, programId: form.programId || undefined };
       const data = await api('/auth/register', { method: 'POST', body });
       login(data.token, data.user);
-      navigate('/student');
+      if (data.needVerify) {
+        setNeedVerify({ email: form.email, token: data.token });
+        setError(null);
+      } else {
+        navigate('/student');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setBusy(false);
     }
   };
+
+  const verifyOtp = async (e) => {
+    e.preventDefault();
+    setOtpBusy(true);
+    setError(null);
+    try {
+      const data = await api('/auth/verify-otp', { method: 'POST', body: { email: needVerify.email, otp } });
+      login(data.token, data.user);
+      navigate('/student');
+    } catch (err) { setError(err.message); } finally { setOtpBusy(false); }
+  };
+
+  const resendOtp = async () => {
+    setOtpBusy(true);
+    setError(null);
+    try {
+      await api('/auth/send-otp', { method: 'POST', body: { email: needVerify.email } });
+      setError(null);
+      alert('OTP дахин илгээлээ — мэйлээ шалгана уу (10 минут хүчинтэй)');
+    } catch (err) { setError(err.message); } finally { setOtpBusy(false); }
+  };
+
+  if (needVerify) {
+    return (
+      <div className="auth-wrap">
+        <div className="auth-card">
+          <div className="auth-logo">Work<span>·</span>Ahead</div>
+          <p className="muted" style={{ textAlign: 'center' }}>Мэйл баталгаажуулалт — OTP</p>
+          <form className="card" onSubmit={verifyOtp}>
+            <p className="small muted" style={{ textAlign: 'center' }}>
+              <strong>{needVerify.email}</strong> хаягт 6 оронтой код илгээлээ (10 минут хүчинтэй).<br />Business mail (Resend) тохируулгагүй бол код server log-д харагдана.
+            </p>
+            <label htmlFor="otp">OTP код</label>
+            <input id="otp" required minLength={6} maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" className="mono" style={{ letterSpacing: 4, textAlign: 'center', fontSize: '1.2rem' }} />
+            {error && <p className="error-text small">{error}</p>}
+            <button className="btn" style={{ width: '100%', marginTop: 16 }} disabled={otpBusy}>
+              {otpBusy ? 'Шалгаж байна…' : 'Баталгаажуулах'}
+            </button>
+            <button type="button" className="btn secondary" style={{ width: '100%', marginTop: 8 }} disabled={otpBusy} onClick={resendOtp}>Дахин илгээх</button>
+            <p className="small muted" style={{ textAlign: 'center', margin: '12px 0 0' }}>
+              <a href="#" onClick={(e) => { e.preventDefault(); setNeedVerify(null); }}>Буцах</a>
+            </p>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-wrap">
