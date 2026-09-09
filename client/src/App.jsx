@@ -29,6 +29,8 @@ import StudentDashboard from './pages/student/Dashboard.jsx';
 import Bookmarks from './pages/student/Bookmarks.jsx';
 import History from './pages/student/History.jsx';
 import Notifications from './pages/student/Notifications.jsx';
+import Terms from './pages/Terms.jsx';
+import Delivery from './pages/Delivery.jsx';
 
 function Guard({ children, admin }) {
   const { user } = useAuth();
@@ -117,6 +119,20 @@ function WarmupBanner() {
   );
 }
 
+function Footer() {
+  return (
+    <footer style={{ textAlign: 'center', padding: '18px 16px 40px', fontSize: '.82rem', color: 'var(--ink-faint)', borderTop: '1px solid var(--rule)', marginTop: 24 }}>
+      <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+        <a href="/terms" style={{ color: 'var(--ink-soft)', textDecoration: 'none' }}>Гэрээ</a>
+        <a href="/delivery" style={{ color: 'var(--ink-soft)', textDecoration: 'none' }}>Хүргэлт</a>
+        <a href="tel:+97666336691" style={{ color: 'var(--ink-soft)', textDecoration: 'none' }}>+976 66336691</a>
+        <a href="https://www.facebook.com/profile.php?id=100068091317280" target="_blank" rel="noopener noreferrer" style={{ color: '#1877F2', textDecoration: 'none' }}>Facebook</a>
+      </div>
+      <div>© 2026 WorkAhead • SSL хамгаалалттай • Bonum Payment Gateway</div>
+    </footer>
+  );
+}
+
 export default function App() {
   return (
     <>
@@ -125,6 +141,8 @@ export default function App() {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/terms" element={<><Terms /><Footer /></>} />
+        <Route path="/delivery" element={<><Delivery /><Footer /></>} />
 
         <Route path="/admin" element={<Guard admin><AdminLayout /></Guard>}>
           <Route index element={<AdminDashboard />} />

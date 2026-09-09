@@ -153,6 +153,19 @@ export default function Profile() {
         </div>
       </div>
 
+      <div className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+        <span className="small muted" style={{ marginRight: 4 }}>Холбоо барих:</span>
+        <a href="tel:+97666336691" aria-label="Call +976 66336691" className="icon-btn" style={{ background: 'var(--paper)', border: '1px solid var(--rule)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+        </a>
+        <a href="tel:+97666336691" className="small mono" style={{ textDecoration: 'none', color: 'var(--ink)', fontWeight: 500 }}>+976 66336691</a>
+        <span style={{ flex: 1 }} />
+        <a href="https://www.facebook.com/profile.php?id=100068091317280" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="icon-btn" style={{ background: '#1877F2', color: 'white', border: 'none', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
+        </a>
+        <a href="https://www.facebook.com/profile.php?id=100068091317280" target="_blank" rel="noopener noreferrer" className="small" style={{ textDecoration: 'none', color: '#1877F2', fontWeight: 600 }}>Facebook</a>
+      </div>
+
       <div className="profile-section-title">Холбоо барих мэдээлэл</div>
       {!editing ? (
         <>

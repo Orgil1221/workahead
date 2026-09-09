@@ -58,6 +58,21 @@ router.post('/checkout', requireAuth, rateLimitFlexible('checkout'), validate(ch
       return res.status(409).json({ error: daysLeft ? `Багц идэвхтэй байна — ${daysLeft} хоног үлдсэн` : 'Энэ багц аль хэдийн худалдаж авсан' });
     }
 
+    // Өдрийн хязгаар — 200 гүйлгээ / 1,399,800₮ (Bonum мерчант шаардлага)
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const [todayCount, todayAgg] = await Promise.all([
+      prisma.paymentTransaction.count({ where: { createdAt: { gte: dayStart }, status: { in: ['PENDING', 'PAID'] } } }),
+      prisma.paymentTransaction.aggregate({ where: { createdAt: { gte: dayStart }, status: { in: ['PENDING', 'PAID'] } }, _sum: { amount: true } }),
+    ]);
+    const todaySum = todayAgg._sum.amount || 0;
+    if (todayCount >= 200) {
+      return res.status(429).json({ error: 'Өдрийн гүйлгээний хязгаар (200) хүрсэн — маргааш дахин оролдоно уу' });
+    }
+    if (todaySum + plan.priceMnt > 1399800) {
+      return res.status(429).json({ error: 'Өдрийн гүйлгээний дүнгийн хязгаар (1,399,800₮) хүрсэн — маргааш дахин оролдоно уу' });
+    }
+
     const transactionId = `wa-${crypto.randomBytes(8).toString('hex')}`;
     const txn = await prisma.paymentTransaction.create({
       data: {
