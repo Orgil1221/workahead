@@ -35,6 +35,7 @@ export default function AdminCatalog() {
         setProgramFilter={(v) => { setProgramFilter(v); loadExams(v).catch((e) => toast(e.message)); }}
         reload={() => loadExams(programFilter)}
       />
+      <AcademicRegistrationSection />
     </>
   );
 }
@@ -283,6 +284,66 @@ function ExamSection({ universities, exams, programFilter, setProgramFilter, rel
           onSaved={() => { setExamModal(null); reload(); }}
         />
       )}
+    </>
+  );
+}
+
+/* ─────────────── Бүртгэлийн салбар / хөтөлбөр — тусдаа AcademicProgram ─────────────── */
+function AcademicRegistrationSection() {
+  const [list, setList] = useState([]);
+  const [schoolFilter, setSchoolFilter] = useState('');
+  const [form, setForm] = useState({ university: 'МУИС', school: '', name: '', code: '' });
+  const [editing, setEditing] = useState(null);
+  const toast = useToast();
+  const load = () => api('/academic-programs').then((d) => setList(d.programs)).catch((e) => toast(e.message));
+  useEffect(() => { load(); }, []);
+  const schools = [...new Set(list.map((p) => p.school))].sort();
+  const filtered = schoolFilter ? list.filter((p) => p.school === schoolFilter) : list;
+  const submit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editing) await api(`/admin/academic-programs/${editing}`, { method: 'PUT', body: form });
+      else await api('/admin/academic-programs', { method: 'POST', body: form });
+      toast(editing ? 'Шинэчлэлээ' : 'Нэмлээ');
+      setForm({ university: 'МУИС', school: '', name: '', code: '' }); setEditing(null); load();
+    } catch (err) { toast(err.message); }
+  };
+  return (
+    <>
+      <div className="page-title-row" style={{ marginTop: 32, borderTop: '2px solid var(--rule)', paddingTop: 16 }}>
+        <h2 style={{ margin: 0 }}>Бүртгэлийн салбар / хөтөлбөр (МУИС — Улаанбаатар)</h2>
+        <span className="badge">{list.length}</span>
+      </div>
+      <p className="small muted">Энэ жагсаалт <code>Бүртгүүлэх → Салбар сургууль / Мэргэжил</code> сонголтод хэрэглэнэ — шалгалтын <code>Сургууль / Хөтөлбөр / Шалгалт</code> -аас тусдаа. Жишээ: <code>МТЭС</code> сонговол <code>Программ хангамж, Компьютерын ухаан</code> гэх мэт тухайн салбарын мэргэжлүүд харагдана.</p>
+      <div className="filter-bar">
+        <select value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)}>
+          <option value="">Бүх салбар</option>
+          {schools.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        {schoolFilter && <span className="small muted" style={{ alignSelf: 'center' }}>{filtered.length} хөтөлбөр</span>}
+      </div>
+      <form className="card" onSubmit={submit} style={{ marginTop: 8 }}>
+        <div className="field-inline">
+          <div><label>Салбар *</label><input value={form.school} onChange={(e) => setForm({ ...form, school: e.target.value })} placeholder="МТЭС, ШУС, БС, ХЗС, ИТС, УТСОУХНУС" /></div>
+          <div style={{ flex: 2 }}><label>Хөтөлбөр / Мэргэжил *</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Нягтлан бодох, Программ хангамж, Орон судлал, Багш..." /></div>
+          <div><label>Код</label><input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="ACC101" /></div>
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button className="btn small" type="submit">{editing ? 'Хадгалах' : 'Нэмэх'}</button>
+            {editing && <button type="button" className="btn secondary small" style={{ marginLeft: 8 }} onClick={() => { setEditing(null); setForm({ university: 'МУИС', school: '', name: '', code: '' }); }}>Цуцлах</button>}
+          </div>
+        </div>
+      </form>
+      <div className="card" style={{ marginTop: 12 }}>
+        {filtered.length === 0 ? <div className="empty-state">Хөтөлбөр алга.</div> : filtered.map((p) => (
+          <div key={p.id} className="row-link" style={{ padding: '8px 4px' }}>
+            <span><strong>{p.name}</strong> <span className="faint small">— {p.school} · {p.university} {p.code && `· ${p.code}`}</span></span>
+            <span className="btn-row">
+              <button className="btn secondary small" onClick={() => { setEditing(p.id); setForm({ university: p.university, school: p.school, name: p.name, code: p.code || '' }); }}>Засах</button>
+              <button className="btn ghost-danger small" onClick={() => confirm(`"${p.name}" устгах уу?`) && api(`/admin/academic-programs/${p.id}`, { method: 'DELETE' }).then(() => { toast('Устгалаа'); load(); }).catch((e) => toast(e.message))}>Устгах</button>
+            </span>
+          </div>
+        ))}
+      </div>
     </>
   );
 }

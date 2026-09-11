@@ -119,28 +119,81 @@ async function main() {
     { code: 'PS401', name: 'Улс төр судлал', school: 'УТСОУХНУС' },
     { code: 'PA401', name: 'Нийтийн удирдлага', school: 'УТСОУХНУС' },
   ];
-  for (let i = 0; i < majors.length; i++) {
-    const m = majors[i];
-    const id = `prog-${m.code.toLowerCase()}`; // кодыг зөвхөн тогтмол ID үүсгэхэд ашиглана — DB-д бичигдэхгүй
-    await prisma.program.upsert({
-      where: { id },
-      update: { name: m.name, school: m.school, universityId: university.id, order: i + 2 },
-      create: { id, name: m.name, school: m.school, universityId: university.id, order: i + 2 },
-    });
-  }
-  console.log(`  ✓ ${majors.length} мэргэжил (МТЭС/БС/ХЗС/ШУС/ИТС/УТСОУХНУС) шинэчлэгдлээ`);
+  // --- Шалгалтын Program: хуучин 40 мэргэжлийн seed устгах (зөвхөн хичээл үлдэнэ) ---
+  // -law101 гэх мэт хуучин prog-* ID-тай Program-ууд шалгалтын ангилалд хамаарахгүй тул цэвэрлэнэ
+  const deletedOld = await prisma.program.deleteMany({ where: { id: { startsWith: 'prog-' } } });
+  if (deletedOld.count) console.log(`  ✗ Хуучин Program мэргэжил ${deletedOld.count} устгалаа (шалгалтын Program-аас тусдаа болгох)`);
+  // Давтагдаагүй хуучин Program-ууд (prog- биш) байвал давхцлыг шалгаж цэвэрлэнэ
+  // (Хоосон үлдээх — шалгалтын Program-д зөвхөн seed-program-math хичээл байх ёстой)
+  console.log(`  ✓ Шалгалтын Program цэвэр — зөвхөн хичээлүүд үлдлээ`);
 
-  // --- Бүртгэлийн AcademicProgram — шалгалтын Program-аас тусдаа ---
-  for (let i = 0; i < majors.length; i++) {
-    const m = majors[i];
+  // --- Бүртгэлийн AcademicProgram — Улаанбаатар дахь МУИС салбарууд (тусдаа) ---
+  // Судалгаагаар баталгаажсан Улаанбаатар дахь 6 салбар + дутуу мэргэжлүүд (Орон судлал, Багш чиглэл) нэмсэн
+  const academicMajors = [
+    // МТЭС — 12 (Мэдээллийн Технологи, Электроникийн Сургууль) — Улаанбаатар
+    { code: 'CS101', name: 'Компьютерын ухаан', school: 'МТЭС' },
+    { code: 'SE101', name: 'Программ хангамж', school: 'МТЭС' },
+    { code: 'IS101', name: 'Мэдээллийн систем', school: 'МТЭС' },
+    { code: 'AI101', name: 'Хиймэл оюун', school: 'МТЭС' },
+    { code: 'CN101', name: 'Компьютерын сүлжээ', school: 'МТЭС' },
+    { code: 'EE101', name: 'Электроникийн инженерчлэл', school: 'МТЭС' },
+    // ШУС — Байгалийн ухаан + Хүмүүнлэг — Улаанбаатар (ХУС, ШУТС нэгтгэсэн)
+    { code: 'MATH201', name: 'Математик', school: 'ШУС' },
+    { code: 'PHYS201', name: 'Физик', school: 'ШУС' },
+    { code: 'CHEM201', name: 'Хими', school: 'ШУС' },
+    { code: 'BIO201', name: 'Биологи', school: 'ШУС' },
+    { code: 'GEO201', name: 'Газарзүй', school: 'ШУС' },
+    { code: 'GEOL201', name: 'Геологи', school: 'ШУС' },
+    { code: 'ORON101', name: 'Орон судлал', school: 'ШУС' },
+    { code: 'HIST201', name: 'Түүх', school: 'ШУС' },
+    { code: 'SOC201', name: 'Социологи', school: 'ШУС' },
+    { code: 'PHIL201', name: 'Философи', school: 'ШУС' },
+    { code: 'PSY201', name: 'Сэтгэл судлал', school: 'ШУС' },
+    { code: 'TEA101', name: 'Багш, Сурган судлал', school: 'ШУС' },
+    { code: 'TEA102', name: 'Монгол хэл, уран зохиолын багш', school: 'ШУС' },
+    { code: 'TEA103', name: 'Англи хэлний багш', school: 'ШУС' },
+    { code: 'TEA104', name: 'Математикийн багш', school: 'ШУС' },
+    // БС — 7 — Улаанбаатар
+    { code: 'FIN101', name: 'Санхүү, банк', school: 'БС' },
+    { code: 'ACC101', name: 'Нягтлан бодох бүртгэл', school: 'БС' },
+    { code: 'MNG101', name: 'Менежмент', school: 'БС' },
+    { code: 'MKT101', name: 'Маркетинг', school: 'БС' },
+    { code: 'TRD101', name: 'Худалдаа', school: 'БС' },
+    // ХЗС — Улаанбаатар (1 — нэгийг хасч, давхардлыг цэвэрлэсэн)
+    { code: 'LAW101', name: 'Эрх зүй', school: 'ХЗС' },
+    // ИТС — 5 — Улаанбаатар
+    { code: 'CE301', name: 'Барилгын инженер', school: 'ИТС' },
+    { code: 'ME301', name: 'Механик инженер', school: 'ИТС' },
+    { code: 'EL301', name: 'Цахилгаан инженер', school: 'ИТС' },
+    { code: 'CHE301', name: 'Химийн инженерчлэл', school: 'ИТС' },
+    { code: 'ENV301', name: 'Хүрээлэн буй орчны инженерчлэл', school: 'ИТС' },
+    // УТСОУХНУС — 3 — Улаанбаатар
+    { code: 'IR401', name: 'Олон улсын харилцаа', school: 'УТСОУХНУС' },
+    { code: 'PS401', name: 'Улс төр судлал', school: 'УТСОУХНУС' },
+    { code: 'PA401', name: 'Нийтийн удирдлага', school: 'УТСОУХНУС' },
+  ];
+  // Давхцсан хуучин AcademicProgram-ууд байвал шинэчлэх, шинэ дутуу нь нэмэгдэнэ
+  for (let i = 0; i < academicMajors.length; i++) {
+    const m = academicMajors[i];
     await prisma.academicProgram.upsert({
       where: { university_school_name: { university: 'МУИС', school: m.school, name: m.name } },
       update: { code: m.code, order: i + 1 },
       create: { university: 'МУИС', school: m.school, name: m.name, code: m.code, order: i + 1 },
     });
   }
+  // Хуучин AcademicProgram дотроос шинэ жагсаалтад байхгүй, давхцсан хуучин нэрс байвал устгах (давхцал цэвэрлэх)
+  const newKeys = new Set(academicMajors.map((m) => `${m.school}::${m.name}`));
+  const allAcad = await prisma.academicProgram.findMany({ where: { university: 'МУИС' }, select: { id: true, school: true, name: true } });
+  let removedDup = 0;
+  for (const a of allAcad) {
+    if (!newKeys.has(`${a.school}::${a.name}`)) {
+      await prisma.academicProgram.delete({ where: { id: a.id } });
+      removedDup++;
+    }
+  }
+  if (removedDup) console.log(`  ✗ Хуучин AcademicProgram давхцал ${removedDup} устгалаа`);
   const acadCount = await prisma.academicProgram.count();
-  console.log(`  ✓ AcademicProgram (бүртгэлийн салбар/хөтөлбөр) ${acadCount} — шалгалтын Program-аас тусдаа`);
+  console.log(`  ✓ AcademicProgram (бүртгэлийн салбар/хөтөлбөр) ${acadCount} — Улаанбаатар МУИС 6 салбар (МТЭС/ШУС/БС/ХЗС/ИТС/УТСОУХНУС) + Орон судлал/Багш нэмсэн, шалгалтын Program-аас тусдаа`);
 
   await prisma.user.upsert({
     where: { email: 'admin@workahead.mn' },

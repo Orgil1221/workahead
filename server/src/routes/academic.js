@@ -5,12 +5,22 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 const router = Router();
 
 // Public — бүртгэлийн салбар сургууль / хөтөлбөр жагсаалт (exam Program-аас тусдаа)
+// Хэрэв AcademicProgram хоосон байвал (seed хийгдээгүй) exam Program-аас fallback хийж хоосон харуулахгүй
 router.get('/academic-programs', async (_req, res, next) => {
   try {
-    const programs = await prisma.academicProgram.findMany({
+    let programs = await prisma.academicProgram.findMany({
       orderBy: [{ university: 'asc' }, { school: 'asc' }, { order: 'asc' }, { name: 'asc' }],
     });
-    // Group by university + school for frontend convenience
+    if (programs.length === 0) {
+      const fallback = await prisma.program.findMany({
+        where: { school: { not: null } },
+        orderBy: [{ school: 'asc' }, { order: 'asc' }],
+        select: { id: true, name: true, school: true, code: true, order: true, university: { select: { name: true, shortName: true } } },
+      });
+      programs = fallback.map((p) => ({
+        id: p.id, university: p.university.shortName || p.university.name, school: p.school, name: p.name, code: p.code, order: p.order,
+      }));
+    }
     const bySchool = {};
     for (const p of programs) {
       if (!bySchool[p.school]) bySchool[p.school] = [];
