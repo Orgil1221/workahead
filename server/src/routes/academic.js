@@ -5,22 +5,13 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 const router = Router();
 
 // Public — бүртгэлийн салбар сургууль / хөтөлбөр жагсаалт (exam Program-аас тусдаа)
-// Хэрэв AcademicProgram хоосон байвал (seed хийгдээгүй) exam Program-аас fallback хийж хоосон харуулахгүй
+// ХОРИГЛОНО: шалгалтын Program-оос fallback хийхгүй — fallback нь шалгалтын хичээлүүдийг
+// бүртгэлийн салбар/хөтөлбөрийн dropdown-д холих асуудал үүсгэсэн (жишээ: school="МУИС" хичээл).
 router.get('/academic-programs', async (_req, res, next) => {
   try {
-    let programs = await prisma.academicProgram.findMany({
+    const programs = await prisma.academicProgram.findMany({
       orderBy: [{ university: 'asc' }, { school: 'asc' }, { order: 'asc' }, { name: 'asc' }],
     });
-    if (programs.length === 0) {
-      const fallback = await prisma.program.findMany({
-        where: { school: { not: null } },
-        orderBy: [{ school: 'asc' }, { order: 'asc' }],
-        select: { id: true, name: true, school: true, code: true, order: true, university: { select: { name: true, shortName: true } } },
-      });
-      programs = fallback.map((p) => ({
-        id: p.id, university: p.university.shortName || p.university.name, school: p.school, name: p.name, code: p.code, order: p.order,
-      }));
-    }
     const bySchool = {};
     for (const p of programs) {
       if (!bySchool[p.school]) bySchool[p.school] = [];
@@ -136,8 +127,19 @@ admin.post('/seed', async (_req, res, next) => {
       });
       created++;
     }
+    // Жагсаалтад байхгүй хуучин/буруу МУИС бүртгэлийг цэвэрлэх (жишээ: бүртгэлийн үед
+    // fallback-аар үүссэн {school: "МУИС"} бүртгэл — npm run seed-ийн цэвэрлэгээтэй ижил логик)
+    const newKeys = new Set(academicMajors.map((m) => `${m.school}::${m.name}`));
+    const allAcad = await prisma.academicProgram.findMany({ where: { university: 'МУИС' }, select: { id: true, school: true, name: true } });
+    let removed = 0;
+    for (const a of allAcad) {
+      if (!newKeys.has(`${a.school}::${a.name}`)) {
+        await prisma.academicProgram.delete({ where: { id: a.id } });
+        removed++;
+      }
+    }
     const count = await prisma.academicProgram.count();
-    res.json({ ok: true, created, count });
+    res.json({ ok: true, created, removed, count });
   } catch (e) { next(e); }
 });
 

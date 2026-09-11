@@ -33,6 +33,17 @@ export default function AcademicPrograms() {
     try { await api(`/admin/academic-programs/${id}`, { method: 'DELETE' }); toast('Устгалаа'); load(); } catch (e) { toast(e.message); }
   };
 
+  const [seeding, setSeeding] = useState(false);
+  const seedMajors = async () => {
+    if (!confirm('МУИС-ийн 35 стандарт салбар/хөтөлбөрийг сэргээх уу?\\n(давхцалгүй upsert хийнэ, стандарт жагсаалтад байхгүй хуучин МУИС бүртгэлүүд цэвэрлэгдэнэ)')) return;
+    setSeeding(true);
+    try {
+      const d = await api('/admin/academic-programs/seed', { method: 'POST' });
+      toast(`Seed дууслаа — нийт ${d.count} хөтөлбөр${d.removed ? `, ${d.removed} хуучин бүртгэл цэвэрлэгдэв` : ''}`);
+      load();
+    } catch (e) { toast(e.message); } finally { setSeeding(false); }
+  };
+
   const bySchool = list.reduce((acc, p) => {
     if (!acc[p.school]) acc[p.school] = [];
     acc[p.school].push(p);
@@ -41,7 +52,12 @@ export default function AcademicPrograms() {
 
   return (
     <>
-      <div className="page-title-row"><h1>Бүртгэлийн салбар / хөтөлбөр (AcademicProgram)</h1></div>
+      <div className="page-title-row">
+        <h1>Бүртгэлийн салбар / хөтөлбөр (AcademicProgram)</h1>
+        <button className="btn secondary small" disabled={seeding} onClick={seedMajors}>
+          {seeding ? 'Seed хийж байна…' : '⤓ Seed — МУИС 35 стандарт хөтөлбөр'}
+        </button>
+      </div>
       <p className="small muted">Энэ хэсэг шалгалтын <code>Сургууль / Хөтөлбөр / Шалгалт</code> -аас тусдаа — зөвхөн бүртгэлийн <code>Салбар сургууль</code> + <code>Мэргэжил</code> сонголтод хэрэглэнэ. МУИС-ийн салбар (МТЭС, ХУС, ИТС гэх мэт) + хөтөлбөр (Нягтлан бодох, Программ хангамж...)-г энд удирдана.</p>
 
       <form className="card" onSubmit={submit}>
