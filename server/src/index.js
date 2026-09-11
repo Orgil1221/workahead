@@ -53,9 +53,9 @@ const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getTokenFromRequest: (req) => req.headers['x-csrf-token'] || req.headers['x-xsrf-token'],
 });
 app.get('/api/auth/csrf', (req, res) => res.json({ csrfToken: generateCsrfToken(req, res) }));
-// Webhook uses HMAC, not CSRF — skip; login/register/logout/otp need no CSRF before auth
+// Webhook uses HMAC, not CSRF — skip; login/register/logout/otp/seed need no CSRF before auth (seed is admin JWT only)
 app.use((req, res, next) => {
-  if (req.path === '/api/payments/webhook' || req.path === '/api/auth/login' || req.path === '/api/auth/register' || req.path === '/api/auth/csrf' || req.path === '/api/auth/logout' || req.path === '/api/auth/send-otp' || req.path === '/api/auth/verify-otp' || req.path === '/api/auth/send-register-otp') return next();
+  if (req.path === '/api/payments/webhook' || req.path === '/api/auth/login' || req.path === '/api/auth/register' || req.path === '/api/auth/csrf' || req.path === '/api/auth/logout' || req.path === '/api/auth/send-otp' || req.path === '/api/auth/verify-otp' || req.path === '/api/auth/send-register-otp' || req.path === '/api/admin/academic-programs/seed') return next();
   return doubleCsrfProtection(req, res, next);
 });
 
