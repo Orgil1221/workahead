@@ -311,10 +311,10 @@ function AcademicRegistrationSection() {
   return (
     <>
       <div className="page-title-row" style={{ marginTop: 32, borderTop: '2px solid var(--rule)', paddingTop: 16 }}>
-        <h2 style={{ margin: 0 }}>Бүртгэлийн салбар / хөтөлбөр (МУИС — Улаанбаатар)</h2>
+        <h2 style={{ margin: 0 }}>Мэргэжлийн жагсаалт</h2>
         <span className="badge">{list.length}</span>
       </div>
-      <p className="small muted">Энэ жагсаалт <code>Бүртгүүлэх → Салбар сургууль / Мэргэжил</code> сонголтод хэрэглэнэ — шалгалтын <code>Сургууль / Хөтөлбөр / Шалгалт</code> -аас тусдаа. Жишээ: <code>МТЭС</code> сонговол <code>Программ хангамж, Компьютерын ухаан</code> гэх мэт тухайн салбарын мэргэжлүүд харагдана.</p>
+      <p className="small muted">Бүртгэлийн <code>Салбар сургууль → Мэргэжил</code> сонголтод хэрэглэнэ — шалгалтын <code>Сургууль / Хөтөлбөр / Шалгалт</code> -аас тусдаа. <code>МТЭС</code> сонговол тухайн салбарын мэргэжлүүд харагдана.</p>
       <div className="filter-bar">
         <select value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)}>
           <option value="">Бүх салбар</option>
@@ -336,7 +336,7 @@ function AcademicRegistrationSection() {
       <div className="card" style={{ marginTop: 12 }}>
         {filtered.length === 0 ? <div className="empty-state">Хөтөлбөр алга.</div> : filtered.map((p) => (
           <div key={p.id} className="row-link" style={{ padding: '8px 4px' }}>
-            <span><strong>{p.name}</strong> <span className="faint small">— {p.school} · {p.university} {p.code && `· ${p.code}`}</span></span>
+            <span><strong>{p.name}</strong> <span className="faint small">— {p.school} · {p.university} {p.code && `· ${p.code}`} · <span className="badge" style={{ marginLeft: 6 }}>{p._count?.students ?? 0} оюутан</span></span></span>
             <span className="btn-row">
               <button className="btn secondary small" onClick={() => { setEditing(p.id); setForm({ university: p.university, school: p.school, name: p.name, code: p.code || '' }); }}>Засах</button>
               <button className="btn ghost-danger small" onClick={() => confirm(`"${p.name}" устгах уу?`) && api(`/admin/academic-programs/${p.id}`, { method: 'DELETE' }).then(() => { toast('Устгалаа'); load(); }).catch((e) => toast(e.message))}>Устгах</button>
