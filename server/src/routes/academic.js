@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../db.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { MUIS_ACADEMIC_MAJORS } from '../data/muisAcademicMajors.js';
 
 const router = Router();
 
@@ -80,43 +81,8 @@ admin.delete('/:id', async (req, res, next) => {
 
 admin.post('/seed', async (_req, res, next) => {
   try {
-    const academicMajors = [
-      { code: 'CS101', name: 'Компьютерын ухаан', school: 'МТЭС' },
-      { code: 'SE101', name: 'Программ хангамж', school: 'МТЭС' },
-      { code: 'IS101', name: 'Мэдээллийн систем', school: 'МТЭС' },
-      { code: 'AI101', name: 'Хиймэл оюун', school: 'МТЭС' },
-      { code: 'CN101', name: 'Компьютерын сүлжээ', school: 'МТЭС' },
-      { code: 'EE101', name: 'Электроникийн инженерчлэл', school: 'МТЭС' },
-      { code: 'MATH201', name: 'Математик', school: 'ШУС' },
-      { code: 'PHYS201', name: 'Физик', school: 'ШУС' },
-      { code: 'CHEM201', name: 'Хими', school: 'ШУС' },
-      { code: 'BIO201', name: 'Биологи', school: 'ШУС' },
-      { code: 'GEO201', name: 'Газарзүй', school: 'ШУС' },
-      { code: 'GEOL201', name: 'Геологи', school: 'ШУС' },
-      { code: 'ORON101', name: 'Орон судлал', school: 'ШУС' },
-      { code: 'HIST201', name: 'Түүх', school: 'ШУС' },
-      { code: 'SOC201', name: 'Социологи', school: 'ШУС' },
-      { code: 'PHIL201', name: 'Философи', school: 'ШУС' },
-      { code: 'PSY201', name: 'Сэтгэл судлал', school: 'ШУС' },
-      { code: 'TEA101', name: 'Багш, Сурган судлал', school: 'ШУС' },
-      { code: 'TEA102', name: 'Монгол хэл, уран зохиолын багш', school: 'ШУС' },
-      { code: 'TEA103', name: 'Англи хэлний багш', school: 'ШУС' },
-      { code: 'TEA104', name: 'Математикийн багш', school: 'ШУС' },
-      { code: 'FIN101', name: 'Санхүү, банк', school: 'БС' },
-      { code: 'ACC101', name: 'Нягтлан бодох бүртгэл', school: 'БС' },
-      { code: 'MNG101', name: 'Менежмент', school: 'БС' },
-      { code: 'MKT101', name: 'Маркетинг', school: 'БС' },
-      { code: 'TRD101', name: 'Худалдаа', school: 'БС' },
-      { code: 'LAW101', name: 'Эрх зүй', school: 'ХЗС' },
-      { code: 'CE301', name: 'Барилгын инженер', school: 'ИТС' },
-      { code: 'ME301', name: 'Механик инженер', school: 'ИТС' },
-      { code: 'EL301', name: 'Цахилгаан инженер', school: 'ИТС' },
-      { code: 'CHE301', name: 'Химийн инженерчлэл', school: 'ИТС' },
-      { code: 'ENV301', name: 'Хүрээлэн буй орчны инженерчлэл', school: 'ИТС' },
-      { code: 'IR401', name: 'Олон улсын харилцаа', school: 'УТСОУХНУС' },
-      { code: 'PS401', name: 'Улс төр судлал', school: 'УТСОУХНУС' },
-      { code: 'PA401', name: 'Нийтийн удирдлага', school: 'УТСОУХНУС' },
-    ];
+    // АЛБАН ЁСНЫ жагсаалт — МУИС-ий элсэлтийн системээс гаргаж авсан (src/data/muisAcademicMajors.js)
+    const academicMajors = MUIS_ACADEMIC_MAJORS;
     let created = 0;
     for (let i = 0; i < academicMajors.length; i++) {
       const m = academicMajors[i];
