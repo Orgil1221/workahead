@@ -14,6 +14,8 @@ router.get('/', async (_req, res, next) => {
       select: {
         id: true, email: true, name: true, role: true, createdAt: true,
         program: { select: { id: true, name: true, school: true } },
+        academicProgramId: true,
+        academicProgram: { select: { id: true, university: true, school: true, name: true } },
         _count: { select: { attempts: true, flags: true } },
         payments: {
           where: { status: 'PAID', OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
@@ -64,16 +66,20 @@ router.post('/', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const { name, role, programId, password } = req.body;
+    const { name, role, programId, academicProgramId, password } = req.body;
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: {
         ...(name !== undefined && { name }),
         ...(role !== undefined && { role: role === 'ADMIN' ? 'ADMIN' : 'STUDENT' }),
         ...(programId !== undefined && { programId: programId || null }),
+        ...(academicProgramId !== undefined && { academicProgramId: academicProgramId || null }),
         ...(password && { passwordHash: await bcrypt.hash(password, 10) }),
       },
-      select: { id: true, email: true, name: true, role: true, programId: true },
+      select: {
+        id: true, email: true, name: true, role: true, programId: true, academicProgramId: true,
+        academicProgram: { select: { id: true, university: true, school: true, name: true } },
+      },
     });
     res.json({ user });
   } catch (e) { next(e); }
