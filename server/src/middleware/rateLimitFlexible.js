@@ -24,13 +24,19 @@ const limiters = {
 };
 
 export function rateLimitFlexible(type = 'general') {
-  // Өдрийн хязгаар 200/1,399,800 + checkout velocity хамгаалалт идэвхтэй (fraud)
-  if (type !== 'checkout' && type !== 'general') {
-    // Бусад нь хэрэглэгчийн хүсэлтээр унтраатай
-    return (_req, _res, next) => next();
-  }
   return async (req, res, next) => {
-    if (process.env.RATE_LIMIT_DISABLED === '1') return next();
+    // RATE_LIMIT_DISABLED only allowed in non-production
+    if (process.env.RATE_LIMIT_DISABLED === '1') {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('RATE_LIMIT_DISABLED ignored in production');
+      } else {
+        return next();
+      }
+    }
+    // Health/ping keep-alive exempt — prevents 750h ping from hitting limiter
+    if (req.path === '/api/health' || req.path === '/health' || req.headers['user-agent']?.includes('keep-alive')) {
+      return next();
+    }
     const limiter = limiters[type] || limiters.general;
     const key = req.user?.id || req.ip;
     try {

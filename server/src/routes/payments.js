@@ -62,18 +62,22 @@ router.post('/checkout', requireAuth, rateLimitFlexible('checkout'), validate(ch
     }
 
     // Өдрийн хязгаар — 200 гүйлгээ / 1,399,800₮ (Bonum мерчант шаардлага)
+    // PENDING-гүй зөвхөн PAID тооцох — PENDING овоолгоор DoS хийхээс сэргийлнэ
+    // PENDING 15минутад expirePending job-аар FAILED болно
     const dayStart = new Date();
     dayStart.setHours(0, 0, 0, 0);
+    const dailyMaxCount = Number(process.env.BONUM_DAILY_MAX_COUNT || 200);
+    const dailyMaxAmount = Number(process.env.BONUM_DAILY_MAX_AMOUNT || 1399800);
     const [todayCount, todayAgg] = await Promise.all([
-      prisma.paymentTransaction.count({ where: { createdAt: { gte: dayStart }, status: { in: ['PENDING', 'PAID'] } } }),
-      prisma.paymentTransaction.aggregate({ where: { createdAt: { gte: dayStart }, status: { in: ['PENDING', 'PAID'] } }, _sum: { amount: true } }),
+      prisma.paymentTransaction.count({ where: { createdAt: { gte: dayStart }, status: 'PAID' } }),
+      prisma.paymentTransaction.aggregate({ where: { createdAt: { gte: dayStart }, status: 'PAID' }, _sum: { amount: true } }),
     ]);
     const todaySum = todayAgg._sum.amount || 0;
-    if (todayCount >= 200) {
-      return res.status(429).json({ error: 'Өдрийн гүйлгээний хязгаар (200) хүрсэн — маргааш дахин оролдоно уу' });
+    if (todayCount >= dailyMaxCount) {
+      return res.status(429).json({ error: `Өдрийн гүйлгээний хязгаар (${dailyMaxCount}) хүрсэн — маргааш дахин оролдоно уу` });
     }
-    if (todaySum + plan.priceMnt > 1399800) {
-      return res.status(429).json({ error: 'Өдрийн гүйлгээний дүнгийн хязгаар (1,399,800₮) хүрсэн — маргааш дахин оролдоно уу' });
+    if (todaySum + plan.priceMnt > dailyMaxAmount) {
+      return res.status(429).json({ error: `Өдрийн гүйлгээний дүнгийн хязгаар (${dailyMaxAmount.toLocaleString()}₮) хүрсэн — маргааш дахин оролдоно уу` });
     }
 
     const transactionId = `wa-${crypto.randomBytes(8).toString('hex')}`;
@@ -88,7 +92,12 @@ router.post('/checkout', requireAuth, rateLimitFlexible('checkout'), validate(ch
     });
 
     if (!isConfigured()) {
-      // Test fallback — Bonum тохируулаагүй үед mock invoice
+      // Fail closed in production — mock only allowed in dev or with explicit ALLOW_MOCK_PAYMENTS=1
+      if (process.env.NODE_ENV === 'production' && process.env.ALLOW_MOCK_PAYMENTS !== '1') {
+        await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { status: 'FAILED', provider: 'NOT_CONFIGURED' } });
+        return res.status(502).json({ error: 'Төлбөрийн гарц тохируулаагүй — админтай холбогдоно уу', code: 'GATEWAY_NOT_CONFIGURED' });
+      }
+      // Test/dev fallback — Bonum тохируулаагүй үед mock invoice
       const mockInvoiceId = `mock-${transactionId}`;
       await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { invoiceId: mockInvoiceId, provider: 'MOCK' } });
       const callbackUrl = `${process.env.PUBLIC_BASE_URL || ''}/student/profile?payment=return&txn=${transactionId}`;
@@ -115,8 +124,13 @@ router.post('/checkout', requireAuth, rateLimitFlexible('checkout'), validate(ch
       });
       return res.json({ followUpLink: invoice.followUpLink, transactionId });
     } catch (bonumErr) {
-      console.error('Bonum invoice failed, fallback to mock:', bonumErr.status, bonumErr.message, bonumErr.detail);
-      // Testapi 503 (nginx) үед mock руу шилжих — хэрэглэгч төлбөрөө тестээр баталгаажуулна
+      console.error('Bonum invoice failed:', bonumErr.status, bonumErr.message, bonumErr.detail);
+      // Fail closed in production — never auto-PAID on gateway error unless explicitly allowed
+      if (process.env.NODE_ENV === 'production' && process.env.ALLOW_MOCK_PAYMENTS !== '1') {
+        await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { status: 'FAILED', provider: 'BONUM_ERROR' } });
+        return res.status(502).json({ error: 'Төлбөрийн гарц түр ажиллахгүй — дахин оролдоно уу', code: 'GATEWAY_ERROR' });
+      }
+      // Dev/test fallback — Bonum 503 үед mock
       const mockInvoiceId = `mock-${transactionId}`;
       await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { invoiceId: mockInvoiceId, provider: 'MOCK' } });
       setTimeout(async () => {
@@ -158,8 +172,11 @@ router.get('/status/:transactionId', requireAuth, async (req, res, next) => {
 router.post('/webhook', async (req, res, next) => {
   try {
     const raw = req.rawBody ? req.rawBody.toString('utf8') : '';
-    if (!verifyChecksum(raw, req.get('x-checksum-v2')))
+    const checksum = req.get('x-checksum-v2');
+    if (!checksum) return res.status(401).json({ error: 'Checksum байхгүй' });
+    if (!verifyChecksum(raw, checksum))
       return res.status(401).json({ error: 'Checksum буруу' });
+    if (!raw || raw.length > 1024 * 100) return res.status(400).json({ error: 'Payload буруу' });
 
     const msg = typeof req.body === 'object' && Buffer.isBuffer(req.body)
       ? JSON.parse(raw)
@@ -167,20 +184,34 @@ router.post('/webhook', async (req, res, next) => {
     const { type, status, body } = msg || {};
 
     if ((type === 'PAYMENT' || type === 'SUBSCRIPTION-PAYMENT') && body?.transactionId) {
+      const transactionId = String(body.transactionId);
+      // Idempotency + amount check
+      const existing = await prisma.paymentTransaction.findFirst({ where: { transactionId }, select: { id: true, amount: true, status: true, planId: true } });
+      if (!existing) {
+        console.warn(`Webhook: unknown transactionId ${transactionId}`);
+        return res.json({ ok: true, warning: 'unknown transaction' });
+      }
+      // Amount tamper check — Bonum amount must match our record
+      if (body.amount != null && Number(body.amount) !== Number(existing.amount)) {
+        console.error(`Webhook amount mismatch ${transactionId}: expected ${existing.amount} got ${body.amount}`);
+        return res.status(400).json({ error: 'Amount таарахгүй' });
+      }
+      if (existing.status === 'PAID') {
+        return res.json({ ok: true, already: true });
+      }
       if (status === 'SUCCESS') {
         const completedAt = body.completedAt ? new Date(body.completedAt.replace(' ', 'T') + 'Z') : new Date();
         // durationDays-г plan-аас авч expiresAt тооцох
-        const txn = await prisma.paymentTransaction.findFirst({ where: { transactionId: String(body.transactionId) }, select: { planId: true } });
         let expiresAt = null;
-        if (txn?.planId) {
-          const plan = await prisma.plan.findUnique({ where: { id: txn.planId }, select: { durationDays: true } });
+        if (existing.planId) {
+          const plan = await prisma.plan.findUnique({ where: { id: existing.planId }, select: { durationDays: true } });
           const days = plan?.durationDays || 30;
           expiresAt = new Date(completedAt.getTime() + days * 86400000);
         } else {
           expiresAt = new Date(completedAt.getTime() + 30 * 86400000);
         }
         await prisma.paymentTransaction.updateMany({
-          where: { transactionId: String(body.transactionId), status: 'PENDING' },
+          where: { transactionId, status: 'PENDING' },
           data: {
             status: 'PAID',
             invoiceId: body.invoiceId != null ? String(body.invoiceId) : undefined,
@@ -191,7 +222,7 @@ router.post('/webhook', async (req, res, next) => {
         });
       } else {
         await prisma.paymentTransaction.updateMany({
-          where: { transactionId: String(body.transactionId), status: 'PENDING' },
+          where: { transactionId, status: 'PENDING' },
           data: { status: 'FAILED' },
         });
       }

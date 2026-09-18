@@ -26,24 +26,34 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 app.use(cookieParser());
-const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : null;
-app.use(cors(corsOrigin ? { origin: corsOrigin, credentials: true } : { credentials: true }));
+// CORS — require explicit origin in production
+const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean) : null;
+if (!corsOrigin && process.env.NODE_ENV === 'production') {
+  console.warn('CORS_ORIGIN not set — default allow is permissive');
+}
+app.use(cors(corsOrigin ? { origin: corsOrigin, credentials: true } : { origin: true, credentials: true }));
 app.use(express.json({
-  limit: '10mb',
+  limit: '1mb',
   verify: (req, _res, buf) => { req.rawBody = buf; },
 }));
 
-// General rate limit — 100 req/min per IP
+// Health before rate limit — keep-alive 01-06 sleep ping буюу UptimeRobot-д зориулсан хөнгөн endpoint
+app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
+app.get('/api/ping', (_req, res) => res.json({ ok: true }));
+
+// General rate limit — 200 req/min per IP (keep-alive exempt inside middleware)
 app.use('/api', rateLimitFlexible('general'));
 
 // CSRF protection (double submit) — GET/HEAD/OPTIONS ignored, webhook excluded
+if (!process.env.CSRF_SECRET && !process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('CRITICAL: CSRF_SECRET/JWT_SECRET missing in production');
+}
 const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || process.env.JWT_SECRET || 'fallback-secret-change-me',
-  getSessionIdentifier: () => 'default',
+  getSessionIdentifier: (req) => req.user?.id || req.ip || 'default',
   cookieName: 'x-csrf-token',
   cookieOptions: {
     sameSite: 'Lax',
-    // Production (https) дээр secure cookie — local dev дээр false хэвээр
     secure: process.env.NODE_ENV === 'production',
     httpOnly: false,
     path: '/',
@@ -59,7 +69,6 @@ app.use((req, res, next) => {
   return doubleCsrfProtection(req, res, next);
 });
 
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api', academicRouter);
 app.use('/api', catalogRoutes);
@@ -82,4 +91,13 @@ app.use((err, _req, res, _next) => {
 });
 
 const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`Work Ahead API → http://localhost:${port}`));
+app.listen(port, () => {
+  console.log(`Work Ahead API → http://localhost:${port}`);
+  // Expire stale PENDING every 5 min — prevents DoS via PENDING flood (C3)
+  import('./jobs/expirePending.js').then(({ expireStalePending }) => {
+    const ttl = Number(process.env.PENDING_TTL_MINUTES || 15);
+    setInterval(() => expireStalePending(ttl), 5 * 60 * 1000);
+    // Run once on startup after 30s
+    setTimeout(() => expireStalePending(ttl), 30_000);
+  }).catch(() => {});
+});

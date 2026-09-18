@@ -1,0 +1,30 @@
+name: keep-alive
+# Render free 750h — шөнийн 01-06 UB (UTC 17-22) хооронд ping хийхгүй → 750цагт багтаана
+# 14 минут тутам 06:00-00:59 UB цагт ping хийнэ (UTC 22:00-16:59)
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if should ping (06-01 UB → UTC 22-16)
+        id: gate
+        run: |
+          HOUR_UTC=$(date -u +%H)
+          HOUR_UB=$(( (10#$HOUR_UTC + 8) % 24 ))
+          echo "UTC $HOUR_UTC → UB $HOUR_UB"
+          if [ "$HOUR_UB" -ge 1 ] && [ "$HOUR_UB" -lt 6 ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Sleep window 01-06 UB — skip ping"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Ping Render health
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          URL="${{ secrets.KEEP_ALIVE_URL || 'https://work-ahead-api.onrender.com/api/health' }}"
+          echo "Ping $URL"
+          curl -fsS -A "keep-alive" --max-time 25 "$URL" || echo "ping failed (cold start?)"
