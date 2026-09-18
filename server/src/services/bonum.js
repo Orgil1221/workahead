@@ -13,8 +13,10 @@ async function request(path, { method = 'GET', headers = {}, body } = {}) {
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  const data = await res.json().catch(() => ({}));
-  return { status: res.status, ok: res.ok, data };
+  const text = await res.text().catch(() => '');
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { data = text ? { raw: text.slice(0,500) } : {}; }
+  return { status: res.status, ok: res.ok, data, text: text.slice(0,500) };
 }
 
 export async function getToken() {
@@ -28,12 +30,14 @@ export async function getToken() {
     if (r.ok && r.data.accessToken) return store(r.data);
   }
 
+  const secretTrim = String(APP_SECRET || '').trim();
+  const terminalTrim = String(TERMINAL_ID || '').trim();
   const r = await request('/bonum-gateway/ecommerce/auth/create', {
-    headers: { Authorization: `AppSecret ${APP_SECRET}`, 'X-TERMINAL-ID': TERMINAL_ID },
+    headers: { Authorization: `AppSecret ${secretTrim}`, 'X-TERMINAL-ID': terminalTrim },
   });
   if (!r.ok || !r.data.accessToken) {
-    console.error(`Bonum auth failed ${r.status} @ ${BASE_URL} terminal=${TERMINAL_ID} secretLen=${String(APP_SECRET||'').trim().length}:`, JSON.stringify(r.data).slice(0,500));
-    throw Object.assign(new Error(`Bonum auth failed (${r.status})`), { status: 502, detail: r.data });
+    console.error(`Bonum auth failed ${r.status} @ ${BASE_URL} terminal=${terminalTrim} secretLen=${secretTrim.length} (rawLen=${String(APP_SECRET||'').length}):`, JSON.stringify(r.data).slice(0,800), 'raw:', (r.text||'').slice(0,300));
+    throw Object.assign(new Error(`Bonum auth failed (${r.status})`), { status: 502, detail: r.data.raw || r.data });
   }
   return store(r.data);
 }
