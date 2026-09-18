@@ -117,8 +117,11 @@ export async function api(path, { method = 'GET', body, formData } = {}) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const e = new Error(data.error || `Алдаа (${res.status})`);
-        // 5xx retryable
-        if (res.status >= 500) e.retryable = true;
+        e.code = data.code;
+        e.detail = data.detail;
+        e.status = data.status || res.status;
+        // 5xx retryable — but GATEWAY errors are not retryable (already handled above, but double-guard)
+        if (res.status >= 500 && !(data.code && String(data.code).startsWith('GATEWAY'))) e.retryable = true;
         throw e;
       }
       return data;

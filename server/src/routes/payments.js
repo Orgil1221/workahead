@@ -128,7 +128,16 @@ router.post('/checkout', requireAuth, rateLimitFlexible('checkout'), validate(ch
       // Fail closed in production — never auto-PAID on gateway error unless explicitly allowed
       if (process.env.NODE_ENV === 'production' && process.env.ALLOW_MOCK_PAYMENTS !== '1') {
         await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { status: 'FAILED', provider: 'BONUM_ERROR' } });
-        return res.status(502).json({ error: 'Төлбөрийн гарц түр ажиллахгүй — дахин оролдоно уу', code: 'GATEWAY_ERROR' });
+        // Expose Bonum detail for admin debugging (truncate, don't leak secrets)
+        const detailStr = (() => {
+          try {
+            const d = bonumErr.detail;
+            if (!d) return undefined;
+            const s = typeof d === 'string' ? d : JSON.stringify(d);
+            return s.slice(0, 400);
+          } catch { return undefined; }
+        })();
+        return res.status(502).json({ error: 'Төлбөрийн гарц түр ажиллахгүй — дахин оролдоно уу', code: 'GATEWAY_ERROR', status: bonumErr.status, detail: detailStr });
       }
       // Dev/test fallback — Bonum 503 үед mock
       const mockInvoiceId = `mock-${transactionId}`;

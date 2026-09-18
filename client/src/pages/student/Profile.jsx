@@ -128,11 +128,14 @@ export default function Profile() {
       window.location.href = d.followUpLink;
     } catch (e) {
       const msg = e.message || 'Төлбөр үүсгэхэд алдаа';
+      // Try to get detail from error object if present
+      const detail = e.detail || '';
       // 502 GATEWAY_NOT_CONFIGURED → админд зориулсан заавар
       if (msg.includes('Гарц тохируулаагүй') || msg.includes('GATEWAY_NOT_CONFIGURED')) {
         toast('Төлбөрийн гарц тохируулаагүй — Render Environment дээр BONUM_APP_SECRET / TERMINAL_ID / CHECKSUM_KEY тавина уу');
-      } else if (msg.includes('Гарц түр') || msg.includes('GATEWAY_ERROR')) {
-        toast('Bonum түр ажиллахгүй — дахин оролдоно уу (Render log шалгана уу)');
+      } else if (msg.includes('Гарц түр') || msg.includes('GATEWAY_ERROR') || e.code === 'GATEWAY_ERROR') {
+        toast(`Bonum алдаа: ${detail ? detail.slice(0,120) : msg} — Render log + BONUM_API_BASE_URL шалгана уу`);
+        console.error('Bonum detail:', e);
       } else {
         toast(msg);
       }
