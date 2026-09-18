@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-const BASE_URL = process.env.BONUM_API_BASE_URL || 'https://testapi.bonum.mn';
+const BASE_URL = (process.env.BONUM_API_BASE_URL || 'https://testapi.bonum.mn').trim().replace(/\/$/, '');
 const APP_SECRET = process.env.BONUM_APP_SECRET;
 const TERMINAL_ID = process.env.BONUM_TERMINAL_ID;
 const CHECKSUM_KEY = process.env.BONUM_CHECKSUM_KEY;
