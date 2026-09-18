@@ -31,8 +31,10 @@ export async function getToken() {
   const r = await request('/bonum-gateway/ecommerce/auth/create', {
     headers: { Authorization: `AppSecret ${APP_SECRET}`, 'X-TERMINAL-ID': TERMINAL_ID },
   });
-  if (!r.ok || !r.data.accessToken)
-    throw Object.assign(new Error(`Bonum auth failed (${r.status})`), { status: 502 });
+  if (!r.ok || !r.data.accessToken) {
+    console.error(`Bonum auth failed ${r.status} @ ${BASE_URL} terminal=${TERMINAL_ID} secretLen=${String(APP_SECRET||'').trim().length}:`, JSON.stringify(r.data).slice(0,500));
+    throw Object.assign(new Error(`Bonum auth failed (${r.status})`), { status: 502, detail: r.data });
+  }
   return store(r.data);
 }
 
