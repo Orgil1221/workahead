@@ -87,8 +87,21 @@ export async function api(path, { method = 'GET', body, formData } = {}) {
         credentials: 'include',
       }, timeout);
 
-      // retry on Render 502/503/504 waking up
+      // retry on Render 502/503/504 waking up — but don't retry app-level gateway errors
       if (res.status === 502 || res.status === 503 || res.status === 504) {
+        // Check if it's an app-level gateway error (has JSON code GATEWAY_*), then don't retry
+        try {
+          const clone = res.clone();
+          const maybe = await clone.json().catch(() => ({}));
+          if (maybe.code && String(maybe.code).startsWith('GATEWAY')) {
+            const e = new Error(maybe.error || `Төлбөрийн гарц алдаа (${res.status})`);
+            e.code = maybe.code;
+            e.retryable = false;
+            throw e;
+          }
+        } catch (err) {
+          if (err.code && String(err.code).startsWith('GATEWAY')) throw err;
+        }
         const e = new Error(`Сервер асч байна (${res.status}) — дахин оролдож байна...`);
         e.retryable = true;
         throw e;
