@@ -123,9 +123,19 @@ export default function Profile() {
     setBusy(true);
     try {
       const d = await api('/payments/checkout', { method: 'POST', body: { planId: plan.id } });
+      if (!d.followUpLink) throw new Error('followUpLink хоосон — Bonum тохиргоо шалгана уу');
+      if (d.mock) toast('Тест горим — 3 секундын дараа баталгаажна');
       window.location.href = d.followUpLink;
     } catch (e) {
-      toast(e.message);
+      const msg = e.message || 'Төлбөр үүсгэхэд алдаа';
+      // 502 GATEWAY_NOT_CONFIGURED → админд зориулсан заавар
+      if (msg.includes('Гарц тохируулаагүй') || msg.includes('GATEWAY_NOT_CONFIGURED')) {
+        toast('Төлбөрийн гарц тохируулаагүй — Render Environment дээр BONUM_APP_SECRET / TERMINAL_ID / CHECKSUM_KEY тавина уу');
+      } else if (msg.includes('Гарц түр') || msg.includes('GATEWAY_ERROR')) {
+        toast('Bonum түр ажиллахгүй — дахин оролдоно уу (Render log шалгана уу)');
+      } else {
+        toast(msg);
+      }
       setBusy(false);
     }
   }
