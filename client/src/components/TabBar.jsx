@@ -9,6 +9,7 @@ const icons = {
   flag: 'M5 21V4m0 1h13l-3 4 3 4H5',
   clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-14v5l3 3',
   users: 'M16 19a4 4 0 0 0-8 0m4-7a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 1 0 7zm9 7a4 4 0 0 0-3-3.87M17 5.13A3.5 3.5 0 0 1 17 12',
+  card: 'M2 6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6zm0 4h20',
 };
 
 export default function TabBar({ items }) {

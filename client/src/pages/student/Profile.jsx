@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../../api/client.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -9,10 +9,7 @@ const fmt = (n) => new Intl.NumberFormat('mn-MN').format(n) + '₮';
 export default function Profile() {
   const { user, logout, updateUser } = useAuth();
   const toast = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [plans, setPlans] = useState(null);
-  const [transactions, setTransactions] = useState([]);
-  const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', programId: '', school: '', customProgram: '' });
   const [programs, setPrograms] = useState([]);
@@ -26,11 +23,8 @@ export default function Profile() {
       return true;
     } catch { return true; }
   });
-  const [payModalPlan, setPayModalPlan] = useState(null);
-
   useEffect(() => {
     api('/payments/plans').then((d) => setPlans(d.plans)).catch(() => setPlans([]));
-    loadTxns();
   }, []);
 
   useEffect(() => {
@@ -80,67 +74,6 @@ export default function Profile() {
       setPw({ current: '', next: '' });
       toast('Нууц үг солигдлоо');
     } catch (err) { toast(err.message); } finally { setPwBusy(false); }
-  }
-
-  // Returning from Bonum hosted page → poll until webhook flips status to PAID
-  useEffect(() => {
-    if (searchParams.get('payment') !== 'return') return;
-    const txn = searchParams.get('txn');
-    setSearchParams({}, { replace: true });
-    let tries = 0;
-    const t = setInterval(async () => {
-      tries++;
-      try {
-        const d = await api(`/payments/status/${txn}`);
-        if (d.transaction.status === 'PAID') {
-          clearInterval(t);
-          toast(`Төлбөр амжилттай — ${d.transaction.plan?.title || ''}`);
-          loadTxns();
-          api('/payments/plans').then((r) => setPlans(r.plans)).catch(() => {});
-          return;
-        }
-        if (d.transaction.status === 'FAILED') {
-          clearInterval(t);
-          toast('Төлбөр амжилтгүй боллоо');
-          return;
-        }
-      } catch {}
-      if (tries >= 10) {
-        clearInterval(t);
-        toast('Төлбөрийн баталгаажуулалт хүлэгдэж байна… түүхээс шалгана уу');
-        loadTxns();
-      }
-    }, 1500);
-    return () => clearInterval(t);
-  }, [searchParams]);
-
-  function loadTxns() {
-    api('/payments/my').then((d) => setTransactions(d.transactions)).catch(() => {});
-  }
-
-  async function buy(plan) {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const d = await api('/payments/checkout', { method: 'POST', body: { planId: plan.id } });
-      if (!d.followUpLink) throw new Error('followUpLink хоосон — Bonum тохиргоо шалгана уу');
-      if (d.mock) toast('Тест горим — 3 секундын дараа баталгаажна');
-      window.location.href = d.followUpLink;
-    } catch (e) {
-      const msg = e.message || 'Төлбөр үүсгэхэд алдаа';
-      // Try to get detail from error object if present
-      const detail = e.detail || '';
-      // 502 GATEWAY_NOT_CONFIGURED → админд зориулсан заавар
-      if (msg.includes('Гарц тохируулаагүй') || msg.includes('GATEWAY_NOT_CONFIGURED')) {
-        toast('Төлбөрийн гарц тохируулаагүй — Render Environment дээр BONUM_APP_SECRET / TERMINAL_ID / CHECKSUM_KEY тавина уу');
-      } else if (msg.includes('Гарц түр') || msg.includes('GATEWAY_ERROR') || e.code === 'GATEWAY_ERROR') {
-        toast(`Bonum алдаа: ${detail ? detail.slice(0,120) : msg} — Render log + BONUM_API_BASE_URL шалгана уу`);
-        console.error('Bonum detail:', e);
-      } else {
-        toast(msg);
-      }
-      setBusy(false);
-    }
   }
 
   if (!user) return null;
@@ -237,7 +170,7 @@ export default function Profile() {
             );
           })()}
           <div className="btn-row" style={{ marginTop: 12 }}>
-            <button className="btn small" disabled={busy}>Хадгалах</button>
+            <button className="btn small">Хадгалах</button>
             <button type="button" className="btn secondary small" onClick={() => setEditing(false)}>Цуцлах</button>
           </div>
         </form>
@@ -264,125 +197,56 @@ export default function Profile() {
         </label>
       </div>
 
-      <div className="profile-section-title">Багц, төлбөр</div>
+      <div className="profile-section-title">Төлбөр</div>
       {plans === null ? (
-        <div className="card"><span className="small muted">Ачааллаж байна…</span></div>
-      ) : plans.length === 0 ? null : (
-        <>
-          {(() => {
-            const p = plans[0];
-            const isOwned = p.owned;
-            const daysLeft = p.expiresAt ? Math.max(0, Math.ceil((new Date(p.expiresAt) - new Date()) / 86400000)) : null;
-            return (
-              <div className={`card plan-card ${isOwned ? 'plan-owned' : ''}`} style={{ padding: 18, border: isOwned ? '1px solid var(--ok)' : undefined }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <span className="mono small muted">{p.code} · {p.durationDays || 30} хоног</span>
-                    <h3 style={{ margin: '4px 0 6px' }}>{p.title}</h3>
-                    <span className="small muted">{p.examCount} шалгалт · AI үнэлгээ · Бүх шийдэл</span>
-                    {p.description && <p className="small muted" style={{ margin: '8px 0 0', lineHeight: 1.5 }}>{p.description}</p>}
-                    <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                      <span className="badge blue">30 хоног</span>
-                      <span className="badge">QPay</span>
-                      <span className="badge">Карт</span>
-                    </div>
+        <div className="card" style={{ padding: 20, textAlign: 'center' }}><span className="small muted">Ачааллаж байна…</span></div>
+      ) : plans.length === 0 ? (
+        <div className="card" style={{ padding: 20, textAlign: 'center', borderStyle: 'dashed', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          <strong>Багцууд удахгүй</strong>
+          <span className="small muted">Төлбөрийн багц бэлдэж байна</span>
+        </div>
+      ) : (
+        (() => {
+          const p = plans[0];
+          const isOwned = p.owned;
+          const daysLeft = p.expiresAt ? Math.max(0, Math.ceil((new Date(p.expiresAt) - new Date()) / 86400000)) : null;
+          return (
+            <Link to="/student/payment" className="card" style={{
+              display: 'block',
+              padding: 18,
+              textDecoration: 'none',
+              color: 'inherit',
+              background: isOwned ? 'rgba(46,139,87,.06)' : 'rgba(255,253,247,.72)',
+              backdropFilter: 'blur(12px)',
+              border: isOwned ? '1px solid rgba(46,139,87,.35)' : '1px solid rgba(216,208,189,.55)',
+              borderRadius: 16,
+              transition: 'transform .15s ease, box-shadow .15s ease'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <span className="badge" style={{ background: 'var(--ink)', color: '#fffdf7', borderColor: 'var(--ink)', fontSize: '.68rem' }}>{p.durationDays || 30} хоног</span>
+                    <span className="badge blue">QPay</span>
+                    <span className="badge">Карт</span>
+                    {isOwned && <span className="badge ok">✓ Идэвхтэй</span>}
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 700, color: isOwned ? 'var(--ok)' : 'var(--ink)' }}>{fmt(p.priceMnt)}</div>
-                    <span className="small faint">/ 30 хоног</span>
-                    <div style={{ marginTop: 10 }}>
-                      {isOwned ? (
-                        <span className="badge ok" style={{ padding: '6px 10px' }}>✓ {daysLeft !== null ? `${daysLeft} хоног үлдсэн` : 'Идэвхтэй'}</span>
-                      ) : (
-                        <button className="btn small" onClick={() => setPayModalPlan(p)}>Дэлгэрэнгүй →</button>
-                      )}
-                    </div>
-                  </div>
+                  <span className="mono small muted">{p.code}</span>
+                  <h3 style={{ margin: '4px 0 6px', fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.2 }}>{p.title}</h3>
+                  <span className="small muted">{p.examCount} шалгалт · AI үнэлгээ</span>
                 </div>
-                {isOwned && (
-                  <p className="small faint" style={{ margin: '10px 0 0' }}>Дуусах: {p.expiresAt ? new Date(p.expiresAt).toLocaleDateString('mn-MN') : '—'} — сунгах бол дахин төлөх боломжтой.</p>
-                )}
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div className="mono" style={{ fontSize: '1.25rem', fontWeight: 800, color: isOwned ? 'var(--ok)' : 'var(--ink)' }}>{fmt(p.priceMnt)}</div>
+                  <span className="small faint">/ 30 хоног</span>
+                </div>
               </div>
-            );
-          })()}
-          {plans.length > 1 && (
-            <div className="small faint" style={{ margin: '8px 2px 0' }}>{plans.length - 1} нэмэлт багц бий — админаас асууна уу.</div>
-          )}
-          <p className="small faint" style={{ margin: '6px 2px 0' }}>Нэг товч → дэлгэрэнгүй → QPay / Карт сонгоод төлнө. Bonum prod эрхгүй үед тест горим ажиллана.</p>
-        </>
-      )}
-      {plans && plans.length === 0 && (
-        <div className="card payment-card">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="5" width="20" height="14" rx="2" />
-            <path d="M2 10h20" />
-          </svg>
-          <div>
-            <strong>Төлбөрийн систем удахгүй</strong>
-            <p className="small muted" style={{ margin: '4px 0 0' }}>
-              Багцууд удахгүй нэмэгдэнэ.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {transactions.length > 0 && (
-        <>
-          <div className="profile-section-title">Төлбөрийн түүх</div>
-          <div className="card" style={{ padding: '4px 16px' }}>
-            {transactions.map((t) => {
-              const isActive = t.status === 'PAID' && (!t.expiresAt || new Date(t.expiresAt) > new Date());
-              const daysLeft = t.expiresAt ? Math.max(0, Math.ceil((new Date(t.expiresAt) - new Date()) / 86400000)) : null;
-              const isGift = t.provider === 'GIFT' || t.provider === 'ADMIN_GIFT';
-              return (
-                <div className="txn-row" key={t.id}>
-                  <span style={{ minWidth: 0 }}>
-                    <strong style={{ display: 'block', fontWeight: 500 }}>{t.plan?.title || 'Багц'} {isGift && <span className="badge blue" style={{ marginLeft: 6, verticalAlign: 'middle' }}>Gift</span>}</strong>
-                    <span className="small muted mono">
-                      {new Date(t.createdAt).toLocaleDateString('mn-MN')} · {isGift ? 'Gift' : fmt(t.amount)}
-                      {t.status === 'PAID' && t.expiresAt && ` · Дуусах: ${new Date(t.expiresAt).toLocaleDateString('mn-MN')} ${isActive && daysLeft !== null ? `(${daysLeft} хоног)` : '(дууссан)'}`}
-                    </span>
-                  </span>
-                  <span className={`txn-status mono ${t.status === 'PAID' ? (isGift ? '' : isActive ? 'ok' : 'fail') : t.status === 'PENDING' ? '' : 'fail'}`} style={isGift ? { color: 'var(--blue-ink)' } : undefined}>
-                    {t.status === 'PAID' ? (isGift ? (isActive ? 'GIFT • ИДЭВХТЭЙ' : 'GIFT • ДУУССАН') : (isActive ? 'ИДЭВХТЭЙ' : 'ХУГАЦАА ДУУССАН')) : ({ PAID: 'ТӨЛӨГДСӨН', PENDING: 'ХҮЛЭЭГДЭЖ БАЙНА', FAILED: 'АМЖИЛТГҮЙ' }[t.status] || t.status)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {payModalPlan && (
-        <div className="modal-overlay" onClick={() => setPayModalPlan(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
-            <h3 style={{ marginTop: 0 }}>{payModalPlan.title}</h3>
-            <span className="mono small muted">{payModalPlan.code} · {payModalPlan.durationDays || 30} хоногийн эрх</span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '12px 0 8px' }}>
-              <span className="mono" style={{ fontSize: '1.9rem', fontWeight: 800 }}>{fmt(payModalPlan.priceMnt)}</span>
-              <span className="small muted">/ 30 хоног</span>
-              <span className="badge blue" style={{ marginLeft: 'auto' }}>{payModalPlan.examCount} шалгалт</span>
-            </div>
-            {payModalPlan.description && <p className="small muted" style={{ margin: 0, lineHeight: 1.5 }}>{payModalPlan.description}</p>}
-            <div className="card" style={{ marginTop: 14, padding: '12px 14px', background: 'rgba(255,253,247,.55)' }}>
-              <strong className="small" style={{ display: 'block', marginBottom: 6 }}>Багцад багтсан:</strong>
-              <ul className="small muted" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
-                <li>Бүх шалгалт ({payModalPlan.examCount}) — Задгай + Тест</li>
-                <li>Иж бүрэн шийдэл + AI үнэлгээ + тайлбар</li>
-                <li>30 хоног хязгааргүй хандалт — хугацаа дуусахад сунгах боломжтой</li>
-                <li>QPay, SocialPay, карт — Bonum-аар баталгаат төлбөр</li>
-              </ul>
-            </div>
-            <div className="btn-row" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
-              <button className="btn secondary" onClick={() => setPayModalPlan(null)}>Цуцлах</button>
-              <button className="btn" disabled={busy} onClick={() => buy(payModalPlan)}>
-                {busy ? 'Уншиж байна…' : `QPay / Картаар төлөх — ${fmt(payModalPlan.priceMnt)}`}
-              </button>
-            </div>
-            <p className="small faint" style={{ marginTop: 10, textAlign: 'center' }}>Төлөх дархад Bonum хуудас нээгдэж QPay QR / карт сонгоно. Prod эрхгүй үед тест төлбөр ажиллана.</p>
-          </div>
-        </div>
+              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="small muted" style={{ flex: 1 }}>{isOwned ? (daysLeft !== null ? `${daysLeft} хоног үлдсэн` : 'Идэвхтэй') : 'Дэлгэрэнгүй үзэх →'}</span>
+                <span style={{ color: 'var(--ink)', fontWeight: 700, fontSize: '.85rem' }}>{isOwned ? 'Сунгах →' : 'Худалдаж авах →'}</span>
+              </div>
+            </Link>
+          );
+        })()
       )}
 
       <button className="btn danger profile-logout" onClick={logout}>

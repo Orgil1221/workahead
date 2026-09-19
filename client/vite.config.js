@@ -5,6 +5,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: { '/api': 'http://localhost:4000' },
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY || 'https://work-ahead-api.onrender.com',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 });

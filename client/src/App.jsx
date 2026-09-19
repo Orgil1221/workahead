@@ -30,6 +30,7 @@ import StudentDashboard from './pages/student/Dashboard.jsx';
 import Bookmarks from './pages/student/Bookmarks.jsx';
 import History from './pages/student/History.jsx';
 import Notifications from './pages/student/Notifications.jsx';
+import Payment from './pages/student/Payment.jsx';
 import Terms from './pages/Terms.jsx';
 import Delivery from './pages/Delivery.jsx';
 
@@ -168,6 +169,7 @@ export default function App() {
           <Route path="bookmarks" element={<Bookmarks />} />
           <Route path="history" element={<History />} />
           <Route path="notifications" element={<Notifications />} />
+          <Route path="payment" element={<Payment />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -11,7 +11,7 @@ const tabs = [
   { to: '/student/dashboard', label: 'Дашбоард', icon: 'chart' },
   { to: '/student/profile', label: 'Профайл', icon: 'users' },
   { to: '/student/history', label: 'Түүх', icon: 'clock' },
-  { to: '/student/notifications', label: 'Мэдэгдэл', icon: 'bell' },
+  { to: '/student/payment', label: 'Төлбөр', icon: 'card' },
 ];
 
 const SEEN_KEY = 'wa_notif_seen';
