@@ -120,7 +120,7 @@ export default function Payment() {
                 <span className="mono small muted">{p.code}</span>
                 <h2 style={{ margin: '6px 0 8px', fontFamily: 'Fraunces, serif', fontSize: '1.45rem', lineHeight: 1.2 }}>{p.title}</h2>
                 {p.description && <p className="small muted" style={{ margin: 0, lineHeight: 1.5, maxWidth: 520 }}>{p.description}</p>}
-                <div className="small muted" style={{ marginTop: 8 }}>{p.examCount} шалгалт · AI үнэлгээ · Бүх шийдэл</div>
+                <div className="small muted" style={{ marginTop: 8 }}>{p.examCount ? `${p.examCount} шалгалт` : 'Бүх шалгалт'} · AI үнэлгээ · Бүх шийдэл</div>
 
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
                   <span className="mono" style={{ fontSize: '1.9rem', fontWeight: 800, color: isOwned ? 'var(--ok)' : 'var(--ink)' }}>{fmt(p.priceMnt)}</span>
@@ -182,11 +182,11 @@ export default function Payment() {
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '14px 0 10px' }}>
               <span className="mono" style={{ fontSize: '2rem', fontWeight: 800 }}>{fmt(payModalPlan.priceMnt)}</span>
               <span className="small muted">/ 30 хоног</span>
-              <span className="badge blue" style={{ marginLeft: 'auto' }}>{payModalPlan.examCount} шалгалт</span>
+              <span className="badge blue" style={{ marginLeft: 'auto' }}>{payModalPlan.examCount ? `${payModalPlan.examCount} шалгалт` : 'Бүх шалгалт'}</span>
             </div>
             <div className="card" style={{ marginTop: 10, padding: '12px 14px', background: 'rgba(255,253,247,.55)', borderRadius: 12 }}>
               <ul className="small muted" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
-                <li>Бүх шалгалт ({payModalPlan.examCount}) — Тест + Задгай</li>
+                <li>{payModalPlan.examCount ? `Бүх шалгалт (${payModalPlan.examCount})` : 'Бүх шалгалт'} — Тест + Задгай</li>
                 <li>Бүх шийдэл + AI үнэлгээ</li>
                 <li>30 хоног хязгааргүй хандалт</li>
               </ul>

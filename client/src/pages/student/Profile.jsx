@@ -240,7 +240,7 @@ export default function Profile() {
                   </div>
                   <span className="mono small muted">{p.code}</span>
                   <h3 style={{ margin: '4px 0 6px', fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.2 }}>{p.title}</h3>
-                  <span className="small muted">{p.examCount} шалгалт · AI үнэлгээ</span>
+                  <span className="small muted">{p.examCount ? `${p.examCount} шалгалт` : 'Бүх шалгалт'} · AI үнэлгээ</span>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div className="mono" style={{ fontSize: '1.25rem', fontWeight: 800, color: isOwned ? 'var(--ok)' : 'var(--ink)' }}>{fmt(p.priceMnt)}</div>
