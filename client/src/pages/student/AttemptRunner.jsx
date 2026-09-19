@@ -349,13 +349,13 @@ function ResultView({ attemptId, onBack }) {
 
       {data.answers.map((a) => {
         const q = a.question;
-        const isQTest = q.type === 'test' || (Array.isArray(q.choices) && q.choices.length === 4);
         const hasChoices = Array.isArray(q.choices) && q.choices.length === 4;
+        const isQTest = q.type === 'test' || (isTest && hasChoices);
         return (
           <div className="card" key={a.id}>
             <span className="question-num mono">№{q.order}</span>
             <span className="badge mono" style={{ float: 'right' }}>{a.pointsEarned}/{q.points} {a.isCorrect ? '✓' : '✗'}</span>
-            {hasChoices && <span className="badge blue" style={{ float: 'right', marginRight: 6 }}>Тест</span>}
+            {isQTest && hasChoices && <span className="badge blue" style={{ float: 'right', marginRight: 6 }}>Тест</span>}
             <div
               className="small"
               style={{
@@ -368,12 +368,13 @@ function ResultView({ attemptId, onBack }) {
             >
               <MathText text={q.prompt} />
             </div>
-            {hasChoices ? (
+            {isQTest && hasChoices ? (
               <>
                 <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
                   {(q.choices || []).map((c) => {
-                    const isGiven = a.givenAnswer === c.key;
-                    const isCorrectKey = q.correctChoice === c.key;
+                    // Correct choice may be shuffled per attempt — use server's correctChoice if available, else q.correctChoice
+                    const isGiven = String(a.givenAnswer || '').trim().toUpperCase() === String(c.key).toUpperCase();
+                    const isCorrectKey = String(q.correctChoice || '').trim().toUpperCase() === String(c.key).toUpperCase();
                     return (
                       <span key={c.key} className="badge" style={{
                         justifyContent: 'flex-start', whiteSpace: 'normal', textAlign: 'left',
