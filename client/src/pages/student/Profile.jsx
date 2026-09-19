@@ -84,17 +84,24 @@ export default function Profile() {
         <h1>Профайл</h1>
       </div>
 
-      <div className="card profile-card">
-        <div className="profile-avatar" aria-hidden="true">
+      <div className="card profile-card" style={{ overflow: 'hidden', minWidth: 0, maxWidth: '100%' }}>
+        <div className="profile-avatar" aria-hidden="true" style={{ flexShrink: 0 }}>
           {user.name?.trim()?.[0]?.toUpperCase() || '?'}
         </div>
-        <div>
-          <h2 style={{ margin: 0 }}>{user.name}</h2>
+        <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+          <h2 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</h2>
           {(user.academicProgram || user.program)
-            ? <span className="badge blue">{(user.academicProgram?.school || user.program?.school) ? `${user.academicProgram?.school || user.program?.school} · ` : ''}{user.academicProgram?.name || user.program?.name}</span>
+            ? (() => {
+                const full = `${(user.academicProgram?.school || user.program?.school) ? `${user.academicProgram?.school || user.program?.school} · ` : ''}${user.academicProgram?.name || user.program?.name}`;
+                return (
+                  <span className="badge blue" title={full} style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle', boxSizing: 'border-box' }}>
+                    {full}
+                  </span>
+                );
+              })()
             : <span className="small muted">Мэргэжил сонгоогүй</span>}
           {plans?.some((p) => p.owned) && (
-            <span className="badge plan-active" style={{ marginLeft: 6 }}>✓ Багц идэвхтэй</span>
+            <span className="badge plan-active" style={{ marginLeft: 6, flexShrink: 0 }}>✓ Багц идэвхтэй</span>
           )}
         </div>
       </div>
