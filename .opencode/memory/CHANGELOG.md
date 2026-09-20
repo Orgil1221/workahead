@@ -21,3 +21,4 @@
 - `2026-09-12 23:48 be1332f feat(academic): 93 MUIS majors`
 - `2026-09-11 21:47 da9f164 fix(academic): registration fallback-g hasaha`
 - `2026-09-11 17:52 6b23dd4 fix(auth): whitelist seed endpoint for CSRF`
+- `2026-09-20 08:56 UTC | cb85196 | .opencode/memory/ARCHITECTURE.md, .opencode/memory/CHANGELOG.md, .opencode/memory/MEMORY.md, .opencode/scripts/log-change.mjs, AGENTS.md | feat(ai): add AI-only memory + auto changelog (for opencode analyze)`
