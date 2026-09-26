@@ -263,9 +263,7 @@ export default function Profile() {
       <footer style={{ textAlign: 'center', padding: '24px 16px 12px', fontSize: '.78rem', color: 'var(--ink-faint)', borderTop: '1px solid var(--rule)', marginTop: 32 }}>
         <div>© 2026 WorkAhead. All rights reserved.</div>
         <div style={{ marginTop: 4 }}>
-          <a href="/terms" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Гэрээ</a>
-          <span style={{ margin: '0 8px' }}>·</span>
-          <a href="/delivery" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Хүргэлт</a>
+          <a href="/terms" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Үйлчилгээний нөхцөл</a>
           <span style={{ margin: '0 8px' }}>·</span>
           <a href="https://www.facebook.com/profile.php?id=100068091317280" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Facebook</a>
         </div>
