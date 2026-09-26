@@ -1,5 +1,6 @@
 ﻿import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import prisma from '../db.js';
@@ -7,11 +8,14 @@ import { requireAuth } from '../middleware/auth.js';
 import { rateLimitFlexible } from '../middleware/rateLimitFlexible.js';
 import { validate } from '../middleware/validate.js';
 import { generateOtp, sendOtpEmail } from '../services/email.js';
+import { createSession, destroySessionByJti } from '../services/session.js';
 
 const router = Router();
 const authLimiter = rateLimitFlexible('auth');
-const sign = (user) =>
-  jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+// jti = session ID — 1 user + 1 deviceType (DESKTOP/MOBILE) тутамд 1 session.
+// Шинэ төхөөрөмж нэвтрэхэд хуучин jti устгагдаж, хуучин token 401 DEVICE_KICKED болно.
+const sign = (user, jti) =>
+  jwt.sign({ sub: user.id, role: user.role, jti }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
 function setAuthCookie(res, token) {
   const isProd = process.env.NODE_ENV === 'production';
@@ -90,7 +94,9 @@ router.post('/register', authLimiter, validate(registerSchema), async (req, res,
       },
     });
     await prisma.emailOtp.delete({ where: { email } }).catch(() => {});
-    const token = sign(user);
+    const jti = crypto.randomUUID();
+    await createSession(user.id, req, jti);
+    const token = sign(user, jti);
     setAuthCookie(res, token);
     res.status(201).json({ token, user: safe(user) });
   } catch (e) { next(e); }
@@ -108,7 +114,9 @@ router.post('/login', authLimiter, validate(loginSchema), async (req, res, next)
     });
     if (!user || !(await bcrypt.compare(password, user.passwordHash)))
       return res.status(401).json({ error: 'Имэйл эсвэл нууц үг буруу' });
-    const token = sign(user);
+    const jti = crypto.randomUUID();
+    await createSession(user.id, req, jti);
+    const token = sign(user, jti);
     setAuthCookie(res, token);
     res.json({ token, user: safe(user) });
   } catch (e) { next(e); }
@@ -147,7 +155,9 @@ router.post('/verify-otp', authLimiter, validate(otpVerifySchema), async (req, r
       data: { isVerified: true, verifyOtp: null, verifyExpires: null },
       include: { program: { select: { id: true, name: true, school: true, code: true } } },
     });
-    const token = sign(updated);
+    const jti = crypto.randomUUID();
+    await createSession(updated.id, req, jti);
+    const token = sign(updated, jti);
     setAuthCookie(res, token);
     res.json({ ok: true, token, user: safe(updated) });
   } catch (e) { next(e); }
@@ -155,7 +165,16 @@ router.post('/verify-otp', authLimiter, validate(otpVerifySchema), async (req, r
 
 router.get('/me', requireAuth, (req, res) => res.json({ user: safe(req.user) }));
 
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+  try {
+    const header = req.headers.authorization || '';
+    const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
+    const token = bearer || req.cookies?.wa_token || null;
+    if (token) {
+      const payload = jwt.decode(token);
+      if (payload?.jti) await destroySessionByJti(payload.jti);
+    }
+  } catch {}
   clearAuthCookie(res);
   res.json({ ok: true });
 });
@@ -258,6 +277,10 @@ router.post('/password', requireAuth, validate(passwordSchema), async (req, res,
       where: { id: u.id },
       data: { passwordHash: await bcrypt.hash(newPass, 10) },
     });
+    // Нууц үг солигдсон — бусад төхөөрөмжүүдийг kick хийнэ, одоогийн session үлдэнэ
+    if (req.jti) {
+      await prisma.userSession.deleteMany({ where: { userId: u.id, NOT: { jti: req.jti } } }).catch(() => {});
+    }
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

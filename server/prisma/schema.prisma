@@ -23,6 +23,11 @@ enum AttemptMode {
   TEST
 }
 
+enum DeviceType {
+  DESKTOP
+  MOBILE
+}
+
 model University {
   id        String    @id @default(cuid())
   name      String    @unique
@@ -148,6 +153,7 @@ model User {
   attempts      TestAttempt[]
   notifications Notification[]
   payments      PaymentTransaction[]
+  sessions      UserSession[]
 
   @@index([role])
 }
@@ -271,4 +277,24 @@ model PaymentTransaction {
 
   @@index([userId])
   @@index([status])
+}
+
+// 1 account = 1 DESKTOP + 1 MOBILE зэрэг — userId+deviceType unique.
+// Шинэ төхөөрөмж нэвтрэхэд хуучин session устгагдаж, хуучин jti-тэй token 401 болно.
+model UserSession {
+  id         String     @id @default(cuid())
+  userId     String
+  deviceType DeviceType
+  jti        String     @unique
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime   @default(now())
+  lastActive DateTime   @default(now())
+  expiresAt  DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceType])
+  @@index([userId])
+  @@index([expiresAt])
 }

@@ -6,7 +6,15 @@ import { useAuth } from '../context/AuthContext.jsx';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(() => {
+    try {
+      if (localStorage.getItem('wa_kicked') === '1') {
+        localStorage.removeItem('wa_kicked');
+        return 'Өөр төхөөрөмжөөс нэвтэрсэн тул энэ төхөөрөмжөөс гарлаа. 1 account — 1 desktop + 1 mobile л зэрэг ашиглах боломжтой.';
+      }
+    } catch {}
+    return null;
+  });
   const [busy, setBusy] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();

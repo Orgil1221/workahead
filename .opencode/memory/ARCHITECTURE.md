@@ -16,7 +16,7 @@ Mongolian university entrance/midterm prep platform (MUIS focused). Students pra
 - **Billing:** `client/src/pages/student/Payment.jsx:206` (hero + modal) ↔ `server/src/routes/payments.js:234` (`checkout 20/h`, daily caps `200/1399800`, `mock fail-closed` `ALLOW_MOCK_PAYMENTS`, webhook `POST /api/payments/webhook:172`)
 - **Exams:** `client/src/pages/student/AttemptRunner.jsx:417` (in-attempt `isTest` `L72` vs `ResultView` `L352 isQTest = type=='test'||(isTest&&hasChoices)` fix `db3ed70`) ↔ `server/src/routes/attempts.js:260` (`mode TIMED→OPEN vs TEST`, `isTestQuestion` `L69`, `ai-grade` `L148`), `ExamDetail.jsx:18` `start('TIMED' vs 'TEST')`
 - **Catalog:** `server/src/routes/admin/catalog.js:13k` + `client/src/pages/admin/Catalog.jsx:22k` (University/Program/Exam/Question CRUD + reorder)
-- **Auth:** `server/src/routes/auth.js:13k` (`OTP 6-digit 10m 60s cooldown` `EmailOtp`, `bcrypt 10`, `JWT 7d` `wa_token httpOnly`), `server/src/middleware/auth.js:1`
+- **Auth:** `server/src/routes/auth.js:13k` (`OTP 6-digit 10m 60s cooldown` `EmailOtp`, `bcrypt 10`, `JWT 7d + jti` `wa_token httpOnly`), `server/src/middleware/auth.js:1` (session check `DEVICE_KICKED`), `server/src/services/session.js:33` (`UserSession userId+deviceType unique` → 1 DESKTOP + 1 MOBILE, `X-Device-Type` else UA parse, login kicks same-type)
 - **Import:** `docs/AI_IMPORT_PROMPT.md:101` single prompt dual-mode (`type open/test + choices[4] A-D + correct_choice`, `LaTeX $...$ only`, 60-100pts) → `server/src/services/importService.js:20` validates 4+correct, `server/scripts/import.js:1`
 
 ## Conventions (must follow)

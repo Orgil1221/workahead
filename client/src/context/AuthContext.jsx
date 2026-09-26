@@ -17,7 +17,17 @@ export function AuthProvider({ children }) {
     setUser(u);
   };
   const logout = async () => {
-    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include', headers: { 'x-csrf-token': localStorage.getItem('wa_csrf') || '' } }); } catch {}
+    try {
+      const token = localStorage.getItem('wa_token');
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'x-csrf-token': localStorage.getItem('wa_csrf') || '',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+    } catch {}
     localStorage.removeItem('wa_token');
     localStorage.removeItem('wa_user');
     setUser(null);

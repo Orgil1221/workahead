@@ -1,6 +1,13 @@
 const BASE = '/api';
 let csrfToken = null;
 
+function getDeviceType() {
+  try {
+    if (/Mobi|Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent)) return 'MOBILE';
+  } catch {}
+  return 'DESKTOP';
+}
+
 // ── helpers ──
 const DEFAULT_TIMEOUT = 12000; // 12s — Render cold start ~30-50s, retried
 const RETRY_COUNT = 2; // total 3 attempts
@@ -71,6 +78,7 @@ export async function api(path, { method = 'GET', body, formData } = {}) {
       const headers = {};
       const token = localStorage.getItem('wa_token');
       if (token) headers.Authorization = `Bearer ${token}`;
+      headers['X-Device-Type'] = getDeviceType();
       if (body) headers['Content-Type'] = 'application/json';
       // CSRF for state-changing requests (login/register excluded server-side)
       if (method !== 'GET' && method !== 'HEAD') {
@@ -108,11 +116,16 @@ export async function api(path, { method = 'GET', body, formData } = {}) {
       }
 
       if (res.status === 401) {
+        const data401 = await res.clone().json().catch(() => ({}));
         localStorage.removeItem('wa_token');
         localStorage.removeItem('wa_user');
+        // Өөр төхөөрөмжөөс нэвтэрсэн — Login дээр монгол мессеж харуулна
+        if (data401.code === 'DEVICE_KICKED') {
+          try { localStorage.setItem('wa_kicked', '1'); } catch {}
+        }
         // don't redirect during warmup health check
         if (path !== '/health' && path !== '/auth/csrf') window.location.href = '/login';
-        throw new Error('Нэвтрэх шаардлагатай');
+        throw new Error(data401.error || 'Нэвтрэх шаардлагатай');
       }
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
