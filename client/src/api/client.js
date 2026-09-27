@@ -123,8 +123,8 @@ export async function api(path, { method = 'GET', body, formData } = {}) {
         if (data401.code === 'DEVICE_KICKED') {
           try { localStorage.setItem('wa_kicked', '1'); } catch {}
         }
-        // don't redirect during warmup health check
-        if (path !== '/health' && path !== '/auth/csrf') window.location.href = '/login';
+        // don't redirect during warmup health check or on public landing (/)
+        if (path !== '/health' && path !== '/auth/csrf' && window.location.pathname !== '/') window.location.href = '/login';
         throw new Error(data401.error || 'Нэвтрэх шаардлагатай');
       }
       const data = await res.json().catch(() => ({}));

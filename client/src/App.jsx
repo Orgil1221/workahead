@@ -4,7 +4,7 @@ import { useAuth } from './context/AuthContext.jsx';
 import { warmup } from './api/client.js';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
-import RootRedirect from './pages/RootRedirect.jsx';
+import Landing from './pages/Landing.jsx';
 import AdminLayout from './components/AdminLayout.jsx';
 import StudentLayout from './components/StudentLayout.jsx';
 
@@ -138,7 +138,7 @@ export default function App() {
     <>
       <WarmupBanner />
       <Routes>
-        <Route path="/" element={<RootRedirect />} />
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/terms" element={<><Terms /><Footer /></>} />
