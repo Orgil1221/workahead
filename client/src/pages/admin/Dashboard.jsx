@@ -45,6 +45,8 @@ export default function AdminDashboard() {
 
       {plans && <PlanPriceEditor plans={plans} onSaved={(updated) => setPlans(updated)} toast={toast} />}
 
+      <LandingThemeEditor toast={toast} />
+
       <h2>Хамгийн их flag-тай асуултууд</h2>
       {stats.mostFlagged.length === 0 ? (
         <p className="muted">Flag ирээгүй байна.</p>
@@ -82,6 +84,44 @@ export default function AdminDashboard() {
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+function LandingThemeEditor({ toast }) {
+  const [theme, setTheme] = useState('auto');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api('/admin/settings/landing-theme').then((d) => setTheme(d.landingTheme || 'auto')).catch(() => {});
+  }, []);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const d = await api('/admin/settings/landing-theme', { method: 'PUT', body: { landingTheme: theme } });
+      setTheme(d.landingTheme);
+      toast('Landing theme хадгалагдлаа — зочдод шууд үйлчилнэ');
+    } catch (e) { toast(e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <>
+      <h2>Landing цаг агаар</h2>
+      <div className="card">
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select value={theme} onChange={(e) => setTheme(e.target.value)} style={{ minWidth: 180 }}>
+            <option value="auto">Авто (УБ цаг агаар + шинэ жил улирал)</option>
+            <option value="clear">Энгийн</option>
+            <option value="rain">Бороо</option>
+            <option value="snow">Цас</option>
+            <option value="newyear">Шинэ жил</option>
+          </select>
+          <button className="btn small" disabled={busy} onClick={save}>{busy ? '…' : 'Хадгалах'}</button>
+        </div>
+        <p className="small faint" style={{ margin: '8px 0 0' }}>Авто үед бороо/цас Улаанбаатарын бодит цаг агаараас, шинэ жил 12.15–01.10 хооронд автоматаар асна.</p>
+      </div>
     </>
   );
 }

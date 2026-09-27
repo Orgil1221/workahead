@@ -56,21 +56,23 @@ function isNewYearSeason(d = new Date()) {
   return (m === 11 && day >= 15) || (m === 0 && day <= 10);
 }
 
-// Canvas бороо/цас — hero дэвсгэр дээр, pointer-eventsгүй, хөнгөн
+// Canvas бороо/цас — БҮТЭН ДЭЛГЭЦ (fixed), контентын ард, pointer-eventsгүй.
+// Бодит харагдуулахын тулд: бороо 2 давхарга (хол/ойр) + салхины шуурга,
+// цас 3 давхарга (жижиг удаан бүдэг + том хурдан тод) + сэвэлзэх хөдөлгөөн.
 function WeatherFx({ mode }) {
   const ref = useRef(null);
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || (mode !== 'rain' && mode !== 'snow')) return;
     const ctx = canvas.getContext('2d');
-    const parent = canvas.parentElement;
     let raf = 0;
     let W = 0;
     let H = 0;
+    let t = 0;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const resize = () => {
-      W = parent.clientWidth;
-      H = parent.clientHeight;
+      W = window.innerWidth;
+      H = window.innerHeight;
       canvas.width = Math.max(1, W * dpr);
       canvas.height = Math.max(1, H * dpr);
       canvas.style.width = `${W}px`;
@@ -80,50 +82,76 @@ function WeatherFx({ mode }) {
     resize();
     window.addEventListener('resize', resize);
     const isRain = mode === 'rain';
-    const count = Math.max(30, Math.min(isRain ? 140 : 100, Math.floor(W / 9)));
     const rnd = (a, b) => a + Math.random() * (b - a);
-    const parts = Array.from({ length: count }, () => ({
-      x: rnd(0, W),
-      y: rnd(0, H),
-      r: isRain ? 0 : rnd(1, 3.4),
-      len: isRain ? rnd(10, 22) : 0,
-      sp: isRain ? rnd(9, 15) : rnd(0.5, 1.6),
-      ph: rnd(0, Math.PI * 2),
-      drift: isRain ? rnd(-2.5, -1) : rnd(-0.4, 0.4),
-    }));
-    const draw = () => {
-      ctx.clearRect(0, 0, W, H);
-      if (isRain) {
-        ctx.strokeStyle = 'rgba(105,145,200,0.5)';
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        for (const p of parts) {
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p.x + p.drift, p.y + p.len);
-        }
-        ctx.stroke();
-      } else {
-        ctx.fillStyle = 'rgba(160,180,210,0.9)';
-        for (const p of parts) {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    };
+    const density = Math.max(0.5, Math.min(1.3, (W * H) / 1000000));
+    const layers = isRain ? [
+      { n: Math.floor(80 * density), sp: [7, 10], len: [8, 14], w: 1, col: 'rgba(105,145,200,0.22)' },
+      { n: Math.floor(80 * density), sp: [12, 19], len: [15, 27], w: 1.4, col: 'rgba(105,145,200,0.5)' },
+    ] : [
+      { n: Math.floor(50 * density), r: [0.8, 1.7], sp: [0.35, 0.8], col: 'rgba(160,180,210,0.5)' },
+      { n: Math.floor(40 * density), r: [1.6, 2.7], sp: [0.7, 1.4], col: 'rgba(160,180,210,0.75)' },
+      { n: Math.floor(25 * density), r: [2.4, 4], sp: [1.2, 2.1], col: 'rgba(170,190,220,0.95)' },
+    ];
+    for (const L of layers) {
+      L.ps = Array.from({ length: L.n }, () => ({
+        x: rnd(0, W), y: rnd(0, H), ph: rnd(0, Math.PI * 2),
+        r: L.r ? rnd(...L.r) : 0, len: L.len ? rnd(...L.len) : 0,
+        sp: rnd(...L.sp), drift: isRain ? rnd(-2.5, -1) : rnd(-0.4, 0.4),
+      }));
+    }
     const step = () => {
-      for (const p of parts) {
-        p.y += p.sp;
-        p.x += p.drift + (isRain ? 0 : Math.sin(p.ph += 0.01) * 0.4);
-        if (p.y > H + 24) { p.y = -24; p.x = rnd(0, W); }
-        if (p.x < -24) p.x = W + 24;
-        if (p.x > W + 24) p.x = -24;
+      t += 16;
+      // Салхины шуурга — үе үе чиглэл хурд өөрчлөгдөнө
+      const gust = Math.sin(t * 0.0004) * 1.6 + Math.sin(t * 0.0013) * 0.7;
+      ctx.clearRect(0, 0, W, H);
+      for (const L of layers) {
+        if (isRain) {
+          ctx.strokeStyle = L.col;
+          ctx.lineWidth = L.w;
+          ctx.beginPath();
+          for (const p of L.ps) {
+            p.y += p.sp;
+            p.x += p.drift + gust;
+            if (p.y > H + 28) { p.y = -28; p.x = rnd(0, W); }
+            if (p.x < -28) p.x = W + 28;
+            if (p.x > W + 28) p.x = -28;
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + p.drift + gust * 0.6, p.y + p.len);
+          }
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = L.col;
+          for (const p of L.ps) {
+            p.ph += 0.008 + p.sp * 0.004;
+            p.y += p.sp;
+            p.x += p.drift + Math.sin(p.ph) * 0.5 + gust * 0.35;
+            if (p.y > H + 8) { p.y = -8; p.x = rnd(0, W); }
+            if (p.x < -8) p.x = W + 8;
+            if (p.x > W + 8) p.x = -8;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
       }
-      draw();
       raf = requestAnimationFrame(step);
     };
-    draw();
-    if (!prefersReducedMotion()) raf = requestAnimationFrame(step);
+    if (prefersReducedMotion()) {
+      // Хөдөлгөөн хориотой үед 1 статикт кадр (хоосон биш)
+      t = 5000;
+      for (const L of layers) {
+        if (isRain) {
+          ctx.strokeStyle = L.col; ctx.lineWidth = L.w; ctx.beginPath();
+          for (const p of L.ps) { ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.drift, p.y + p.len); }
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = L.col;
+          for (const p of L.ps) { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); }
+        }
+      }
+    } else {
+      raf = requestAnimationFrame(step);
+    }
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
@@ -137,9 +165,21 @@ function WeatherFx({ mode }) {
 function SantaHat({ className = '' }) {
   return (
     <svg className={`santa-hat ${className}`} viewBox="0 0 48 48" aria-hidden="true">
-      <path d="M8 38 Q10 20 26 14 Q34 11 40 14 L36 20 Q30 17 24 20 Q12 25 12 38 Z" fill="#d22630" />
-      <rect x="6" y="36" width="28" height="8" rx="4" fill="#fff" stroke="#e2ddd2" strokeWidth="1" />
-      <circle cx="40" cy="15" r="5" fill="#fff" stroke="#e2ddd2" strokeWidth="1" />
+      {/* Конус — зүүн доороос дээш баруун орой руу */}
+      <path
+        d="M9 34 C12 21 24 9 38 11 C35 14 32 16 29 19 C24 23 22 28 22 34 Z"
+        fill="#d22630"
+      />
+      {/* Сүүдэр — гүн мэдрэмж */}
+      <path
+        d="M9 34 C12 21 24 9 38 11 L36 13 C24 12 14 22 12 34 Z"
+        fill="#a31621"
+        opacity="0.45"
+      />
+      {/* Цагаан зах */}
+      <rect x="5" y="32.5" width="30" height="9.5" rx="4.75" fill="#ffffff" stroke="#e2ddd2" strokeWidth="1" />
+      {/* Бөмбөлөг */}
+      <circle cx="38.5" cy="12" r="5.2" fill="#ffffff" stroke="#e2ddd2" strokeWidth="1" />
     </svg>
   );
 }
@@ -153,8 +193,7 @@ const MARQUEE_WORDS = [
   'Иж бүрэн бодолт',
 ];
 
-const STEPS = [
-  {
+const STEPS = [  {
     n: '1',
     title: 'Шалгалтаа сонго',
     body: 'Их сургууль, хичээл, улирлын эсвэл явцын шалгалтаараа шүүж, бодит даалгавраа ол.',
@@ -221,8 +260,6 @@ const FEATURES = [
 
 /* ---------- component ---------- */
 
-const WTHEME_KEY = 'wa_landing_theme';
-
 export default function Landing() {
   const { user } = useAuth();
 
@@ -231,25 +268,17 @@ export default function Landing() {
   const [courseCount, setCourseCount] = useState(0);
   const [uniCount, setUniCount] = useState(0);
 
-  // Цаг агаар theme: auto | clear | rain | snow | newyear
-  const [wtheme, setWtheme] = useState(() => {
-    try { return localStorage.getItem(WTHEME_KEY) || 'auto'; } catch { return 'auto'; }
-  });
+  // Цаг агаар theme — админ удирддаг (admin/settings/landing-theme).
+  // Landing дээрх selector хасагдсан; зочин зөвхөн харна.
+  const [adminTheme, setAdminTheme] = useState('auto');
   const [wx, setWx] = useState(null); // { temp, fx } | null — Open-Meteo Улаанбаатар
 
   const statsRef = useRef(null);
   const statsCountedRef = useRef(false);
   const revealRefs = useRef([]);
 
-  // Нэвтэрсэн хэрэглэгч landing харахгүй — useAuth (wa_token/wa_user) дээр суурилав.
-  if (user) {
-    return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/student'} replace />;
-  }
-
-  const changeTheme = (v) => {
-    setWtheme(v);
-    try { localStorage.setItem(WTHEME_KEY, v); } catch {}
-  };
+  // Үр дүнгийн theme: admin(auto/..) → auto бол УБ цаг агаар / шинэ жил улирал
+  const wtheme = adminTheme || 'auto';
 
   // Улаанбаатарын realtime цаг агаар (Open-Meteo, түлхүүр шаардлагагүй)
   useEffect(() => {
@@ -270,7 +299,7 @@ export default function Landing() {
   const eff = wtheme !== 'auto' ? wtheme : (isNewYearSeason() ? 'newyear' : (wx?.fx || 'clear'));
   const fx = eff === 'newyear' ? 'snow' : eff === 'rain' || eff === 'snow' ? eff : null;
 
-  // Public stats — plain fetch, never the app's api() helper (it redirects on 401).
+  // Public stats + админы theme — plain fetch, never the app's api() helper (it redirects on 401).
   useEffect(() => {
     let cancelled = false;
     fetch('/api/programs-public')
@@ -280,6 +309,7 @@ export default function Landing() {
       })
       .then((data) => {
         if (cancelled) return;
+        if (data?.landingTheme) setAdminTheme(data.landingTheme);
         const programs = Array.isArray(data?.programs) ? data.programs : [];
         if (programs.length === 0) throw new Error('empty');
         const universities = new Set(programs.map((p) => p.universityName).filter(Boolean));
@@ -337,8 +367,14 @@ export default function Landing() {
     return () => io.disconnect();
   }, []);
 
+  // Нэвтэрсэн хэрэглэгч landing харахгүй — бүх hook-ийн дараа (hook дараалал алдагдахгүй)
+  if (user) {
+    return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/student'} replace />;
+  }
+
   return (
     <div className="landing" data-wtheme={eff}>
+      <WeatherFx mode={fx} />
       {/* 1. Navbar */}
       <header className="wa-nav">
         <div className="wa-nav__inner">
@@ -347,19 +383,6 @@ export default function Landing() {
             Work<span className="wa-logo__dot">·</span>Ahead
           </span>
           <div className="wa-nav__actions">
-            <select
-              className="wtheme-select"
-              value={wtheme}
-              onChange={(e) => changeTheme(e.target.value)}
-              aria-label="Цаг агаарын сэдэв"
-              title="Цаг агаарын сэдэв"
-            >
-              <option value="auto">Авто</option>
-              <option value="clear">Энгийн</option>
-              <option value="rain">Бороо</option>
-              <option value="snow">Цас</option>
-              <option value="newyear">Шинэ жил</option>
-            </select>
             <ThemeToggle compact />
             <Link to="/login" className="wa-btn wa-btn--ghost">
               Нэвтрэх
@@ -381,7 +404,6 @@ export default function Landing() {
       <main>
         {/* 2. Hero */}
         <section className="wa-hero">
-          <WeatherFx mode={fx} />
           <div className="wa-hero__grid">
             <div className="wa-hero__copy">
               <span className="wa-pill">Улирлын · Явцын шалгалт</span>
@@ -401,7 +423,6 @@ export default function Landing() {
                 МУИС болон Монголын их сургуулиудын жинхэнэ улирлын, явцын шалгалтын
                 бодлогуудыг бод, AI-аас шууд үнэлгээ, тайлбар аваад шалгалтын бэлтгэлээ хурдасга.
               </p>
-              <p className="wa-hero__note">Бүртгэл үнэ төлбөргүй • QPay, SocialPay-гаар төлбөр</p>
             </div>
 
             <div className="wa-hero__visual" aria-hidden="true">
@@ -444,6 +465,13 @@ export default function Landing() {
               </div>
             </div>
           </div>
+          {(eff === 'snow' || eff === 'newyear') && (
+            <div className="snowbank" aria-hidden="true">
+              <svg viewBox="0 0 1200 60" preserveAspectRatio="none">
+                <path d="M0 38 Q 150 10 300 30 T 600 28 T 900 34 T 1200 24 L1200 60 L0 60 Z" fill="currentColor" />
+              </svg>
+            </div>
+          )}
         </section>
 
         {/* 3. Marquee */}
@@ -507,6 +535,7 @@ export default function Landing() {
 
         {/* 7. About */}
         <section className="wa-about" ref={registerReveal}>
+          {eff === 'newyear' && <SantaHat className="on-about" />}
           <p className="wa-about__text">
             WorkAhead бол Монголын их сургуулиудын оюутнуудад зориулсан шалгалтын бэлтгэл платформ.
             Бид бодит хичээлийн даалгавар, AI үнэлгээгээр таны шалгалтын бэлтгэлийг хамгийн богино замаар хийж өгдөг.

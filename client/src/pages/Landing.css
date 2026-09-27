@@ -678,33 +678,30 @@
   .wa-marquee__track {
     transform: none !important;
   }
+
+  .landing[data-wtheme="newyear"] .santa-hat {
+    animation: none !important;
+  }
 }
 
 /* ---------------- цаг агаар theme ---------------- */
 
-.wa-hero { position: relative; overflow: clip; }
+.wa-hero { position: relative; }
 .wa-hero__grid { position: relative; z-index: 1; }
+/* Бүтэн дэлгэцийн цаг агаар — бүх контентын ард */
 .wfx {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  pointer-events: none;
   z-index: 0;
+  pointer-events: none;
 }
-
-/* Theme selector (navbar) */
-.wtheme-select {
-  font-family: Inter, sans-serif;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--ink);
-  background: transparent;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  padding: 0.45rem 0.6rem;
-  min-height: 36px;
-  cursor: pointer;
+.landing .wa-nav,
+.landing main,
+.landing .wa-footer,
+.landing .landing-ctabar {
+  position: relative;
+  z-index: 1;
 }
-.wtheme-select option { color: #211d17; }
 
 /* УБ цаг агаарын pill */
 .wa-pill.wx-pill {
@@ -756,6 +753,34 @@
   50% { opacity: 0.25; }
 }
 
+/* Цасан дов — hero доод ирмэг дээр (цас/шинэ жил) */
+.snowbank {
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  z-index: 0;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+.snowbank svg { display: block; width: 100%; height: 56px; }
+[data-theme="dark"] .snowbank { color: rgba(220, 230, 245, 0.14); }
+
+/* Борооны сүүдэр — hero бага зэрэг бүрхэг */
+[data-wtheme="rain"] .wa-hero {
+  background: linear-gradient(180deg, rgba(47, 111, 237, 0.07), transparent 65%);
+}
+
+/* Санта малгай савалгаа (transform хөндөхгүй — translate property) */
+.landing[data-wtheme="newyear"] .santa-hat {
+  animation: hatBob 3.2s ease-in-out infinite;
+}
+@keyframes hatBob {
+  from { translate: 0 -2px; }
+  to { translate: 0 3px; }
+}
+
+/* Marquee дээр хулгана очиход зогсоно */
+.wa-marquee:hover .wa-marquee__track { animation-play-state: paused; }
+
 /* ---------------- mobile sticky CTA ---------------- */
 
 .landing-ctabar { display: none; }
@@ -786,6 +811,5 @@
     display: inline-flex;
     align-items: center;
   }
-  .wtheme-select { min-height: 44px; }
   .santa-hat.on-logo { transform: translate(40px, -12px) rotate(12deg); }
 }

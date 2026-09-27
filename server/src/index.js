@@ -18,6 +18,7 @@ import adminStatsRoutes from './routes/admin/stats.js';
 import adminUserRoutes from './routes/admin/users.js';
 import adminImportRoutes from './routes/admin/import.js';
 import adminPlanRoutes from './routes/admin/plans.js';
+import adminSettingsRoutes from './routes/admin/settings.js';
 import { academicRouter, academicAdminRouter } from './routes/academic.js';
 
 const app = express();
@@ -83,6 +84,7 @@ app.use('/api/admin/stats', adminStatsRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/import', adminImportRoutes);
 app.use('/api/admin/plans', adminPlanRoutes);
+app.use('/api/admin/settings', adminSettingsRoutes);
 app.use('/api/admin/academic-programs', academicAdminRouter);
 
 app.use((err, _req, res, _next) => {

@@ -20,7 +20,9 @@ router.get('/programs-public', async (_req, res, next) => {
         universityName: u.shortName || u.name,
       }))
     );
-    res.json({ programs });
+    // Админы тогтоосон landing theme — default 'auto' (УБ цаг агаар)
+    const themeRow = await prisma.siteSetting.findUnique({ where: { key: 'landingTheme' } }).catch(() => null);
+    res.json({ programs, landingTheme: themeRow?.value || 'auto' });
   } catch (e) { next(e); }
 });
 

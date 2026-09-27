@@ -279,6 +279,14 @@ model PaymentTransaction {
   @@index([status])
 }
 
+// Админы удирддаг сайтын тохиргоо (key-value) — жишээ: landing цаг агаарын theme.
+// Render startup дээр `prisma db push`-ээр автоматаар үүснэ.
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 // 1 account = 1 DESKTOP + 1 MOBILE зэрэг — userId+deviceType unique.
 // Шинэ төхөөрөмж нэвтрэхэд хуучин session устгагдаж, хуучин jti-тэй token 401 болно.
 model UserSession {
