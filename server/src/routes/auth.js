@@ -51,6 +51,14 @@ const loginSchema = z.object({
 });
 const otpSendSchema = z.object({ body: z.object({ email: z.string().email('Имэйл буруу') }) });
 const otpVerifySchema = z.object({ body: z.object({ email: z.string().email('Имэйл буруу'), otp: z.string().min(6).max(6) }) });
+const forgotSchema = z.object({ body: z.object({ email: z.string().email('Имэйл буруу') }) });
+const resetSchema = z.object({
+  body: z.object({
+    email: z.string().email('Имэйл буруу'),
+    otp: z.string().min(6, 'OTP 6 оронтой').max(6),
+    newPassword: z.string().min(8, 'Нууц үг хамгийн багадаа 8 тэмдэгт').max(72),
+  }),
+});
 
 // Pre-registration OTP — business mail (Resend) 60s cooldown, 10min expiry
 router.post('/send-register-otp', authLimiter, validate(otpSendSchema), async (req, res, next) => {
@@ -65,7 +73,47 @@ router.post('/send-register-otp', authLimiter, validate(otpSendSchema), async (r
     const otp = generateOtp();
     const expires = new Date(Date.now() + 10 * 60 * 1000);
     await prisma.emailOtp.upsert({ where: { email }, update: { otp, expires }, create: { email, otp, expires } });
-    await sendOtpEmail(email, otp);
+    await sendOtpEmail(email, otp, 'register');
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// Нууц үг мартсан — OTP илгээх (enumeration-ээс хамгаалж үргэлж ok:true)
+router.post('/forgot-password', authLimiter, validate(forgotSchema), async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+    // Хэрэглэгч байхгүй ч ok:true буцаана — имэйл байгаа эсэхийг битгий илчилнэ
+    if (!user) return res.json({ ok: true });
+    const existing = await prisma.emailOtp.findUnique({ where: { email } });
+    if (existing && new Date(existing.expires).getTime() - Date.now() > 9 * 60 * 1000) {
+      return res.status(429).json({ error: '1 минутын дараа дахин илгээнэ үү' });
+    }
+    const otp = generateOtp();
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+    await prisma.emailOtp.upsert({ where: { email }, update: { otp, expires }, create: { email, otp, expires } });
+    await sendOtpEmail(email, otp, 'reset');
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// OTP баталгаажуулж шинэ нууц үг үүсгэх
+router.post('/reset-password', authLimiter, validate(resetSchema), async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(400).json({ error: 'OTP буруу эсвэл хугацаа дууссан' });
+    const stored = await prisma.emailOtp.findUnique({ where: { email } });
+    if (!stored || !stored.otp) return res.status(400).json({ error: 'OTP үүсээгүй — Code илгээх дарна уу' });
+    if (new Date() > new Date(stored.expires)) return res.status(400).json({ error: 'OTP хугацаа дууссан — дахин илгээнэ үү' });
+    if (String(stored.otp) !== String(otp).trim()) return res.status(400).json({ error: 'OTP буруу' });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(newPassword, 10) },
+    });
+    await prisma.emailOtp.delete({ where: { email } }).catch(() => {});
+    // Аюулгүй байдал: бүх төхөөрөмжийн session устгана — дахин нэвтрэх шаардлагатай
+    await prisma.userSession.deleteMany({ where: { userId: user.id } }).catch(() => {});
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
@@ -136,7 +184,7 @@ router.post('/send-otp', authLimiter, validate(otpSendSchema), async (req, res, 
     const otp = generateOtp();
     const verifyExpires = new Date(Date.now() + 10 * 60 * 1000);
     await prisma.user.update({ where: { id: user.id }, data: { verifyOtp: otp, verifyExpires } });
-    await sendOtpEmail(email, otp);
+    await sendOtpEmail(email, otp, 'verify');
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

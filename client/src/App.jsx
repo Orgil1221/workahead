@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext.jsx';
 import { warmup } from './api/client.js';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
 import Landing from './pages/Landing.jsx';
 import AdminLayout from './components/AdminLayout.jsx';
 import StudentLayout from './components/StudentLayout.jsx';
@@ -141,6 +142,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/terms" element={<><Terms /><Footer /></>} />
 
         <Route path="/admin" element={<Guard admin><AdminLayout /></Guard>}>

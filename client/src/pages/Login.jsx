@@ -44,6 +44,9 @@ export default function Login() {
           <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <label htmlFor="password">Нууц үг</label>
           <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <p className="small" style={{ textAlign: 'right', margin: '6px 0 0' }}>
+            <Link to="/forgot-password">Нууц үгээ мартсан уу?</Link>
+          </p>
           {error && <p className="error-text small">{error}</p>}
           <button className="btn" style={{ width: '100%', marginTop: 16 }} disabled={busy}>
             {busy ? 'Нэвтэрч байна…' : 'Нэвтрэх'}
