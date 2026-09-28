@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#211d17"/>
+  <rect x="3.5" y="3.5" width="57" height="57" rx="11" fill="none" stroke="#d8d0bd" stroke-width="1.5" opacity="0.5"/>
+  <text x="32" y="40" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="24" fill="#f7f3ea" letter-spacing="0.5">W<tspan fill="#e0644f">·</tspan>A</text>
+  <text x="32" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="6.5" letter-spacing="1.5" fill="#97907e">WORKAHEAD</text>
+</svg>
