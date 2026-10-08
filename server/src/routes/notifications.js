@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../db.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { sendPushToUsers } from '../services/push.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -37,7 +38,23 @@ router.post('/', requireAuth, requireAdmin, async (req, res, next) => {
         createdById: req.user.id,
       },
     });
-    res.status(201).json({ notification });
+    // Push fan-out — in-app мэдэгдэл + систем notification зэрэг очно.
+    // Push алдаа нь мэдэгдэл үүсгэхэд нөлөөлөхгүй.
+    let push = null;
+    try {
+      const users = await prisma.user.findMany({
+        where: programId ? { programId } : {},
+        select: { id: true },
+      });
+      push = await sendPushToUsers(users.map((u) => u.id), {
+        title: notification.title,
+        body: notification.body,
+        url: '/student/notifications',
+      });
+    } catch (e) {
+      console.warn('notification push fan-out failed:', e?.message || e);
+    }
+    res.status(201).json({ notification, push });
   } catch (e) { next(e); }
 });
 

@@ -54,8 +54,8 @@ export default function AdminNotify() {
     e.preventDefault();
     setBusy(true);
     try {
-      await api('/notifications', { method: 'POST', body: form });
-      toast('Мэдэгдэл илгээлээ');
+      const r = await api('/notifications', { method: 'POST', body: form });
+      toast(r.push && r.push.total > 0 ? `Мэдэгдэл + push илгээлээ (${r.push.sent}/${r.push.total})` : 'Мэдэгдэл илгээлээ');
       setForm({ title: '', body: '', programId: '' });
       loadList();
     } catch (err) { toast(err.message); }
