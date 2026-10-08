@@ -11,6 +11,7 @@ Mongolian university entrance/midterm prep platform (MUIS focused). Students pra
 - **DB:** `server/prisma/schema.prisma:1` Postgres Neon, 8 models: `University→Program→Exam→Question→Flag/Bookmark/TestAttempt→AttemptAnswer`, plus `AcademicProgram` (MUIS majors), `Plan/PlanExam/PaymentTransaction`, `Notification`, `EmailOtp/User`
 - **Services:** `server/src/services/bonum.js:92` (QPAY/E_COMMERCE HMAC `x-checksum-v2`), `gemini.js:58` (AI grade), `email.js:80` (Resend→SMTP→console), `importService.js:150` (JSON/CSV), `shuffle.js:35` (`seed=attemptId+questionId`)
 - **Deploy:** `render.yaml:12` Docker `work-ahead-api` `health /api/health`, `vercel.json:9` `client/dist` proxy `/api/*`, `docker-compose.yml:62` local pg16+redis, `start-dev.ps1:210`
+- **Push:** `server/src/routes/push.js:104` (`public-key/subscribe/unsubscribe/my/test/admin/send`) + `services/push.js:56` (`web-push` VAPID, dead-sub cleanup) ↔ `client/public/sw.js:27` + `client/src/push.js:98` + test UI `Notifications.jsx` (student) / `Notify.jsx` (admin self-test), `PushSubscription` model, `vercel.json:12` sw no-cache
 
 ## How to Improve (where to touch)
 - **Billing:** `client/src/pages/student/Payment.jsx:206` (hero + modal) ↔ `server/src/routes/payments.js:234` (`checkout 20/h`, daily caps `200/1399800`, `mock fail-closed` `ALLOW_MOCK_PAYMENTS`, webhook `POST /api/payments/webhook:172`)

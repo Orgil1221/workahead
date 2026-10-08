@@ -154,6 +154,7 @@ model User {
   notifications Notification[]
   payments      PaymentTransaction[]
   sessions      UserSession[]
+  pushSubscriptions PushSubscription[]
 
   @@index([role])
 }
@@ -277,6 +278,22 @@ model PaymentTransaction {
 
   @@index([userId])
   @@index([status])
+}
+
+// Web Push subscription — 1 user олон төхөөрөмжтэй байж болно (endpoint unique).
+// System notification (түгжээтэй утсан дээр ч) илгээхэд ашиглана.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // Админы удирддаг сайтын тохиргоо (key-value) — жишээ: landing цаг агаарын theme.

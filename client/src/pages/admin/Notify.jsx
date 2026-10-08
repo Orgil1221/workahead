@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import { useToast } from '../../context/ToastContext.jsx';
+import { enablePush, sendTestPush } from '../../push.js';
 
 export default function AdminNotify() {
   const [programs, setPrograms] = useState([]);
@@ -9,7 +10,22 @@ export default function AdminNotify() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [testBusy, setTestBusy] = useState(false);
   const toast = useToast();
+
+  // Өөрийн утсан дээр push турших (хэрэглэгчдэд илгээхээс өмнө)
+  const sendSelfTest = async () => {
+    setTestBusy(true);
+    try {
+      try { await enablePush(); } catch (e) {
+        // Аль хэдийн бүртгэлтэй бол үргэлжлүүлнэ, permission denied бол зогсоно
+        if (String(e.message).includes('хориглогдсон') || String(e.message).includes('Зөвшөөрөл')) throw e;
+      }
+      const r = await sendTestPush('WorkAhead тест (админ)', 'Админ push ажиллаж байна.');
+      toast(`Тест илгээлээ (${r.sent}/${r.total} төхөөрөмж)`);
+    } catch (err) { toast(err.message); }
+    finally { setTestBusy(false); }
+  };
 
   const loadPrograms = () => {
     api('/admin/catalog/universities')
@@ -63,6 +79,15 @@ export default function AdminNotify() {
   return (
     <>
       <div className="page-title-row"><h1>Мэдэгдэл илгээх</h1></div>
+      <div className="card" style={{ marginBottom: 14 }}>
+        <h3 style={{ margin: '0 0 6px' }}>Push турших (өөртөө)</h3>
+        <p className="small muted" style={{ margin: '0 0 10px' }}>
+          Хэрэглэгчдэд зарлахаасаа өмнө өөрийн утсан дээрээ шалгаарай — утсаа түгжээд ирж байгаа эсэхийг хараарай.
+        </p>
+        <button className="btn" onClick={sendSelfTest} disabled={testBusy}>
+          {testBusy ? 'Илгээж байна…' : 'Өөртөө тест push явуулах'}
+        </button>
+      </div>
       <form className="card" onSubmit={send}>
         <label htmlFor="nprog">Хүлээн авагч</label>
         <select id="nprog" value={form.programId} onChange={(e) => setForm({ ...form, programId: e.target.value })}>
