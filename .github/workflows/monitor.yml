@@ -1,0 +1,70 @@
+name: monitor
+# Uptime monitor — backend (Render) + frontend (Vercel) шалгана.
+# keep-alive-ээс ялгаа: ping хийхээс гадна DOWN үед job FAIL болж
+# GitHub Actions-оос улаан тэмдэг + email notification ирнэ.
+# keep-alive '*/5', энэ '2-59/5' (offset) → хоорондоо 2-3 мин зайтай, Render 15 мин sleep-д орохгүй.
+# Шөнийн 01-06 UB унтах цонхонд шалгахгүй (Render зориуд унтаадаг).
+on:
+  schedule:
+    - cron: '2-59/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      API_URL: ${{ secrets.KEEP_ALIVE_URL }}
+      SITE_URL: ${{ secrets.SITE_URL }}
+    steps:
+      - name: Sleep-window gate (01-06 UB skip)
+        id: gate
+        run: |
+          HOUR_UTC=$(date -u +%H)
+          HOUR_UB=$(( (10#$HOUR_UTC + 8) % 24 ))
+          echo "UTC $HOUR_UTC -> UB $HOUR_UB"
+          if [ "$HOUR_UB" -ge 1 ] && [ "$HOUR_UB" -lt 6 ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Sleep window 01-06 UB - skip monitor"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check backend /api/health
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          URL="${API_URL:-https://work-ahead-api.onrender.com/api/health}"
+          echo "Checking $URL"
+          START=$(date +%s)
+          HTTP=$(curl -sS -A "monitor" -o /tmp/health.json -w "%{http_code}" --max-time 90 --retry 2 --retry-delay 10 --retry-all-errors "$URL") || {
+            echo "::error::Backend DOWN - $URL unreachable (curl failed)"
+            exit 1
+          }
+          END=$(date +%s)
+          echo "HTTP $HTTP in $((END - START))s"
+          cat /tmp/health.json
+          echo ""
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Backend DOWN - HTTP $HTTP from $URL"
+            exit 1
+          fi
+          grep -q '"ok":true' /tmp/health.json || {
+            echo "::error::Backend UNHEALTHY - ok:true missing"
+            exit 1
+          }
+          echo "Backend OK"
+
+      - name: Check frontend
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          URL="${SITE_URL:-https://www.workahead.me}"
+          echo "Checking $URL"
+          HTTP=$(curl -sS -A "monitor" -o /dev/null -w "%{http_code}" --max-time 60 --retry 1 "$URL") || {
+            echo "::error::Frontend DOWN - $URL unreachable"
+            exit 1
+          }
+          echo "HTTP $HTTP"
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Frontend DOWN - HTTP $HTTP from $URL"
+            exit 1
+          fi
+          echo "Frontend OK"

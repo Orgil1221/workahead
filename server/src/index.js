@@ -39,7 +39,8 @@ app.use(express.json({
 }));
 
 // Health before rate limit — keep-alive 01-06 sleep ping буюу UptimeRobot-д зориулсан хөнгөн endpoint
-app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
+// monitor.yml (GitHub) + UptimeRobot хоёулаа эндээс шалгана
+app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: process.uptime(), time: new Date().toISOString() }));
 app.get('/api/ping', (_req, res) => res.json({ ok: true }));
 
 // General rate limit — 200 req/min per IP (keep-alive exempt inside middleware)
