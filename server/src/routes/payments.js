@@ -100,7 +100,7 @@ router.post('/checkout', requireAuth, rateLimitFlexible('checkout'), validate(ch
       // Test/dev fallback — Bonum тохируулаагүй үед mock invoice
       const mockInvoiceId = `mock-${transactionId}`;
       await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { invoiceId: mockInvoiceId, provider: 'MOCK' } });
-      const callbackUrl = `${process.env.PUBLIC_BASE_URL || ''}/student/profile?payment=return&txn=${transactionId}`;
+      const callbackUrl = `${process.env.PUBLIC_BASE_URL || ''}/student/payment?payment=return&txn=${transactionId}`;
       setTimeout(async () => {
         try {
           const p = await prisma.plan.findUnique({ where: { id: planId }, select: { durationDays: true } });
@@ -111,7 +111,7 @@ router.post('/checkout', requireAuth, rateLimitFlexible('checkout'), validate(ch
       return res.json({ followUpLink: callbackUrl, transactionId, mock: true });
     }
 
-    const callbackUrl = `${process.env.PUBLIC_BASE_URL || ''}/student/profile?payment=return&txn=${transactionId}`;
+    const callbackUrl = `${process.env.PUBLIC_BASE_URL || ''}/student/payment?payment=return&txn=${transactionId}`;
     try {
       const invoice = await createInvoice({
         amount: plan.priceMnt,
@@ -220,7 +220,9 @@ router.post('/webhook', async (req, res, next) => {
           expiresAt = new Date(completedAt.getTime() + 30 * 86400000);
         }
         await prisma.paymentTransaction.updateMany({
-          where: { transactionId, status: 'PENDING' },
+          // PENDING + аль хэдийн EXPIRED болсон (15 мин TTL < 60 мин invoice) —
+          // хэрэглэгч төлбөрөө удаашруулсан ч мөнгө амжилттай төлөгдсөн бол эрх нээгдэнэ
+          where: { transactionId, OR: [{ status: 'PENDING' }, { status: 'FAILED', provider: 'EXPIRED' }] },
           data: {
             status: 'PAID',
             invoiceId: body.invoiceId != null ? String(body.invoiceId) : undefined,

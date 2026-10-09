@@ -5,7 +5,7 @@ const APP_SECRET = process.env.BONUM_APP_SECRET;
 const TERMINAL_ID = process.env.BONUM_TERMINAL_ID;
 const CHECKSUM_KEY = process.env.BONUM_CHECKSUM_KEY;
 
-let tokenCache = { accessToken: null, refreshToken: null, expiresAt: 0 };
+let tokenCache = { accessToken: null, refreshToken: null, expiresAt: 0, refreshTtl: 0 };
 
 async function request(path, { method = 'GET', headers = {}, body } = {}) {
   const res = await fetch(BASE_URL + path, {
@@ -92,5 +92,7 @@ export function verifyChecksum(rawBody, checksumHeader) {
 }
 
 export function isConfigured() {
-  return Boolean(APP_SECRET && TERMINAL_ID);
+  // CHECKSUM_KEY заавал — үгүй бол invoice үүснэ, мөнгө орно, гэхдээ webhook 401 болж
+  // төлбөр хэзээ ч PAID болохгүй (хамгийн аюултай тохиргооны алдаа)
+  return Boolean(APP_SECRET && TERMINAL_ID && CHECKSUM_KEY);
 }

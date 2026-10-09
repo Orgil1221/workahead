@@ -58,6 +58,7 @@ export default function Payment() {
       const d = await api('/payments/checkout', { method: 'POST', body: { planId: plan.id } });
       if (!d.followUpLink) throw new Error('followUpLink хоосон — Bonum тохиргоо шалгана уу');
       if (d.mock) toast('Тест горим — 3 секундын дараа баталгаажна');
+      setBusy(false);
       window.location.href = d.followUpLink;
     } catch (e) {
       const msg = e.message || 'Төлбөр үүсгэхэд алдаа';
