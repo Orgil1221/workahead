@@ -25,7 +25,7 @@
   --wa-header-h: 4.25rem;
   background: var(--paper);
   color: var(--ink);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--font-body);
   overflow-x: clip;
 }
 
@@ -49,7 +49,7 @@
   gap: 0.4rem;
   padding: 0.6rem 1.15rem;
   border-radius: 999px;
-  font-family: Inter, sans-serif;
+  font-family: var(--font-body);
   font-weight: 700;
   font-size: 0.92rem;
   border: 1px solid transparent;
@@ -131,7 +131,7 @@
 }
 
 .wa-logo {
-  font-family: Fraunces, serif;
+  font-family: var(--font-head);
   font-weight: 700;
   font-size: 1.15rem;
   letter-spacing: -0.01em;
@@ -163,7 +163,7 @@
 }
 
 .wa-h1 {
-  font-family: Fraunces, serif;
+  font-family: var(--font-head);
   font-weight: 700;
   font-size: clamp(2.1rem, 4.6vw, 3.4rem);
   line-height: 1.16;
@@ -184,7 +184,7 @@
 }
 
 .wa-hero__note {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
   color: var(--ink-faint);
   margin: 0;
@@ -261,13 +261,13 @@
 }
 
 .wa-card__timer {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   color: var(--ink-faint);
 }
 
 .wa-card__question {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 1.05rem;
   color: var(--ink);
   margin: 0 0 1rem;
@@ -336,7 +336,7 @@
 }
 
 .wa-stamp__num {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: 1.25rem;
   line-height: 1;
@@ -388,7 +388,7 @@
 }
 
 .wa-marquee__item {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
   color: var(--ink-soft);
   white-space: nowrap;
@@ -418,7 +418,7 @@
 }
 
 .wa-stat__num {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: clamp(2rem, 5vw, 2.8rem);
   color: var(--ink);
@@ -446,7 +446,7 @@
 }
 
 .wa-h2 {
-  font-family: Fraunces, serif;
+  font-family: var(--font-head);
   font-weight: 700;
   font-size: clamp(1.5rem, 3vw, 2rem);
   margin: 0 0 2rem;
@@ -469,14 +469,14 @@
 }
 
 .wa-step__n {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--accent);
   font-weight: 700;
   font-size: 0.95rem;
 }
 
 .wa-step__title {
-  font-family: Fraunces, serif;
+  font-family: var(--font-head);
   font-size: 1.05rem;
   font-weight: 700;
   margin: 0.5rem 0 0.5rem;
@@ -517,7 +517,7 @@
 }
 
 .wa-feature__title {
-  font-family: Fraunces, serif;
+  font-family: var(--font-head);
   font-size: 1rem;
   font-weight: 700;
   margin: 0 0 0.5rem;
@@ -621,7 +621,7 @@
 }
 
 .wa-footer__copy {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--ink-faint);
 }
 
@@ -706,7 +706,7 @@
 /* УБ цаг агаарын pill */
 .wa-pill.wx-pill {
   margin-left: 0.5rem;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   letter-spacing: 0;
   text-transform: none;
 }
