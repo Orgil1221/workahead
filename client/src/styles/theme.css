@@ -474,6 +474,30 @@ label { display: block; font-size: .8rem; font-weight: 600; color: var(--ink-sof
 .auth-logo { text-align: center; font-family: var(--font-head); font-size: 1.8rem; font-weight: 700; margin-bottom: 4px; }
 .auth-logo span { color: var(--accent); }
 
+/* OTP — 6 тусдаа дугуйрсан хайрцаг */
+.otp-boxes { display: flex; gap: 8px; justify-content: space-between; margin: 6px 0 2px; }
+.otp-box {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 52px;
+  height: 52px;
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 600;
+  text-align: center;
+  caret-color: var(--accent);
+  transition: border-color .15s ease, box-shadow .15s ease, transform .1s ease;
+}
+.otp-box:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(160, 49, 35, .14);
+}
+.otp-box:disabled { opacity: .55; }
+
 /* ═══════════ UI polish — бэх, цаас, хөдөлгөөн ═══════════ */
 
 /* Хуудас шилжилт */

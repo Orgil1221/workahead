@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import OtpInput from '../components/OtpInput.jsx';
 
 export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '', programId: '', school: '', customProgram: '' });
@@ -69,8 +70,8 @@ export default function Register() {
   // Алхам 2: имэйлд ирсэн OTP-г оруулаад баталгаажуулах → бүртгэл үүсэж шууд нэвтэрнэ
   const verifyOtp = async (e) => {
     e.preventDefault();
-    if (!otp.trim()) {
-      setError('Имэйлд ирсэн 6 оронтой кодоо оруулна уу');
+    if (otp.trim().length !== 6) {
+      setError('6 оронтой кодоо бүрэн оруулна уу');
       return;
     }
     setOtpBusy(true);
@@ -105,8 +106,8 @@ export default function Register() {
             <p className="small muted" style={{ textAlign: 'center' }}>
               <strong>{pending.email}</strong> хаягт 6 оронтой код илгээлээ (10 минут хүчинтэй).
             </p>
-            <label htmlFor="otp">OTP код</label>
-            <input id="otp" required minLength={6} maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" className="mono" style={{ letterSpacing: 4, textAlign: 'center', fontSize: '1.2rem' }} />
+            <label>OTP код</label>
+            <OtpInput value={otp} onChange={setOtp} disabled={otpBusy} />
             {error && <p className="error-text small">{error}</p>}
             <button className="btn" style={{ width: '100%', marginTop: 16 }} disabled={otpBusy}>
               {otpBusy ? 'Шалгаж байна…' : 'Баталгаажуулж нэвтрэх'}

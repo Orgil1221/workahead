@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
+import OtpInput from '../components/OtpInput.jsx';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -105,18 +106,8 @@ export default function ForgotPassword() {
             <p className="small muted" style={{ marginTop: 0 }}>
               <strong>{email}</strong> хаягт код илгээлээ. Кодоо оруулж шинэ нууц үгээ үүсгэнэ үү.
             </p>
-            <label htmlFor="fp-otp">OTP код</label>
-            <input
-              id="fp-otp"
-              required
-              minLength={6}
-              maxLength={6}
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              placeholder="123456"
-              className="mono"
-              style={{ letterSpacing: 4, textAlign: 'center', fontSize: '1.2rem' }}
-            />
+            <label>OTP код</label>
+            <OtpInput value={otp} onChange={setOtp} disabled={busy} />
             <label htmlFor="fp-new">Шинэ нууц үг</label>
             <input
               id="fp-new"
