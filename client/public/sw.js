@@ -1,5 +1,8 @@
 /* WorkAhead service worker — Web Push харуулна + дарахаар нээнэ.
    Vite `public/sw.js` → build-д `/sw.js` болон хувилна. Гараар бичсэн, Workbox үгүй. */
+// Шинэ хувилбар шууд идэвхжих — хуучин SW гацсан таб дээр шинэчлэгдэхгүй байх асуудлаас сэргийлнэ
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 self.addEventListener('push', (event) => {
   let data = {};
   try {
