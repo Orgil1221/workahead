@@ -83,7 +83,7 @@ export default function Payment() {
     <>
       <div className="page-title-row" style={{ marginBottom: 16 }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: 'Fraunces, serif', fontSize: '1.6rem' }}>Төлбөр</h1>
+          <h1 style={{ margin: 0, fontFamily: 'var(--font-head)', fontSize: '1.6rem' }}>Төлбөр</h1>
           <p className="small muted" style={{ margin: '4px 0 0' }}>Багц сонгож, 30 хоногийн эрхээ идэвхжүүлнэ</p>
         </div>
       </div>
@@ -119,7 +119,7 @@ export default function Payment() {
                   {isOwned && <span className="badge ok" style={{ marginLeft: 'auto' }}>✓ Идэвхтэй</span>}
                 </div>
                 <span className="mono small muted">{p.code}</span>
-                <h2 style={{ margin: '6px 0 8px', fontFamily: 'Fraunces, serif', fontSize: '1.45rem', lineHeight: 1.2 }}>{p.title}</h2>
+                <h2 style={{ margin: '6px 0 8px', fontFamily: 'var(--font-head)', fontSize: '1.45rem', lineHeight: 1.2 }}>{p.title}</h2>
                 {p.description && <p className="small muted" style={{ margin: 0, lineHeight: 1.5, maxWidth: 520 }}>{p.description}</p>}
                 <div className="small muted" style={{ marginTop: 8 }}>{p.examCount ? `${p.examCount} шалгалт` : 'Бүх шалгалт'} · AI үнэлгээ · Бүх шийдэл</div>
 
@@ -178,7 +178,7 @@ export default function Payment() {
       {payModalPlan && (
         <div className="modal-overlay" onClick={() => setPayModalPlan(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
-            <h3 style={{ margin: '4px 0 6px', fontFamily: 'Fraunces, serif' }}>{payModalPlan.title}</h3>
+            <h3 style={{ margin: '4px 0 6px', fontFamily: 'var(--font-head)' }}>{payModalPlan.title}</h3>
             <span className="mono small muted">{payModalPlan.code} · {payModalPlan.durationDays || 30} хоног</span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '14px 0 10px' }}>
               <span className="mono" style={{ fontSize: '2rem', fontWeight: 800 }}>{fmt(payModalPlan.priceMnt)}</span>
