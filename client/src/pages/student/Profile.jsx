@@ -134,16 +134,16 @@ export default function Profile() {
               padding: 18,
               textDecoration: 'none',
               color: 'inherit',
-              background: isOwned ? 'rgba(46,139,87,.06)' : 'rgba(255,253,247,.72)',
+              background: isOwned ? 'rgba(46,139,87,.06)' : 'color-mix(in srgb, var(--paper-raised) 72%, transparent)',
               backdropFilter: 'blur(12px)',
-              border: isOwned ? '1px solid rgba(46,139,87,.35)' : '1px solid rgba(216,208,189,.55)',
+              border: isOwned ? '1px solid rgba(46,139,87,.35)' : '1px solid var(--rule)',
               borderRadius: 16,
               transition: 'transform .15s ease, box-shadow .15s ease'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                    <span className="badge" style={{ background: 'var(--ink)', color: '#fffdf7', borderColor: 'var(--ink)', fontSize: '.68rem' }}>{p.durationDays || 30} хоног</span>
+                    <span className="badge" style={{ background: 'var(--ink)', color: 'var(--paper)', borderColor: 'var(--ink)', fontSize: '.68rem' }}>{p.durationDays || 30} хоног</span>
                     <span className="badge blue">QPay</span>
                     <span className="badge">Карт</span>
                     {isOwned && <span className="badge ok">✓ Идэвхтэй</span>}

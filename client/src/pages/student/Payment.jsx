@@ -106,14 +106,14 @@ export default function Payment() {
             return (
               <div className="card" style={{
                 padding: 22,
-                background: isOwned ? 'rgba(46,139,87,.06)' : 'rgba(255,253,247,.72)',
+                background: isOwned ? 'rgba(46,139,87,.06)' : 'color-mix(in srgb, var(--paper-raised) 72%, transparent)',
                 backdropFilter: 'blur(16px) saturate(1.5)',
-                border: isOwned ? '1px solid rgba(46,139,87,.35)' : '1px solid rgba(216,208,189,.65)',
+                border: isOwned ? '1px solid rgba(46,139,87,.35)' : '1px solid var(--rule)',
                 boxShadow: '0 10px 30px rgba(33,29,23,.08), 0 1px 2px rgba(33,29,23,.06)',
                 borderRadius: '18px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <span className="badge" style={{ background: 'var(--ink)', color: '#fffdf7', borderColor: 'var(--ink)' }}>{p.durationDays || 30} хоног</span>
+                  <span className="badge" style={{ background: 'var(--ink)', color: 'var(--paper)', borderColor: 'var(--ink)' }}>{p.durationDays || 30} хоног</span>
                   <span className="badge blue">QPay</span>
                   <span className="badge">Карт</span>
                   {isOwned && <span className="badge ok" style={{ marginLeft: 'auto' }}>✓ Идэвхтэй</span>}
@@ -185,7 +185,7 @@ export default function Payment() {
               <span className="small muted">/ 30 хоног</span>
               <span className="badge blue" style={{ marginLeft: 'auto' }}>{payModalPlan.examCount ? `${payModalPlan.examCount} шалгалт` : 'Бүх шалгалт'}</span>
             </div>
-            <div className="card" style={{ marginTop: 10, padding: '12px 14px', background: 'rgba(255,253,247,.55)', borderRadius: 12 }}>
+            <div className="card" style={{ marginTop: 10, padding: '12px 14px', background: 'color-mix(in srgb, var(--paper-raised) 55%, transparent)', borderRadius: 12 }}>
               <ul className="small muted" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
                 <li>{payModalPlan.examCount ? `Бүх шалгалт (${payModalPlan.examCount})` : 'Бүх шалгалт'} — Тест + Задгай</li>
                 <li>Бүх шийдэл + AI үнэлгээ</li>
