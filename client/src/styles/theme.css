@@ -463,10 +463,34 @@ label { display: block; font-size: .8rem; font-weight: 600; color: var(--ink-sof
 /* ── Misc ── */
 .page-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .empty-state { text-align: center; padding: 48px 20px; color: var(--ink-faint); }
-.spinner {
-  width: 26px; height: 26px; margin: 40px auto; display: block;
-  border: 3px solid var(--rule); border-top-color: var(--accent);
-  border-radius: 50%; animation: spin .7s linear infinite;
+/* Branded loader — шалгалтын улаан тамга (landing wa-stamp хэв) + эргэх тасархай цагираг */
+.loader { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 52px 0; }
+.loader-stamp {
+  position: relative;
+  width: 74px; height: 74px;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-head); font-weight: 700; font-size: 1.2rem;
+  transform: rotate(-8deg);
+  background: color-mix(in srgb, var(--paper-raised) 70%, transparent);
+  animation: stampPulse 1.6s ease-in-out infinite;
+}
+.loader-stamp::before {
+  content: '';
+  position: absolute; inset: -8px;
+  border-radius: 50%;
+  border: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  animation: spin 1.8s linear infinite;
+}
+.loader-text {
+  font-family: var(--font-mono); font-size: .75rem; letter-spacing: .08em;
+  color: var(--ink-faint);
+}
+@keyframes stampPulse {
+  0%, 100% { transform: rotate(-8deg) scale(1); }
+  50% { transform: rotate(-8deg) scale(1.06); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .toast {

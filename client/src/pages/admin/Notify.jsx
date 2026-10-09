@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import { useToast } from '../../context/ToastContext.jsx';
+import Spinner from '../../components/Spinner.jsx';
 import { enablePush, sendTestPush } from '../../push.js';
 
 export default function AdminNotify() {
@@ -117,7 +118,7 @@ export default function AdminNotify() {
       </div>
 
       {loading ? (
-        <div className="card" style={{ textAlign: 'center', padding: 24 }}><span className="spinner" style={{ margin: '10px auto' }} /></div>
+        <Spinner />
       ) : list.length === 0 ? (
         <div className="card empty-state">Илгээсэн мэдэгдэл алга</div>
       ) : (

@@ -1,7 +1,8 @@
-export default function Spinner() {
+export default function Spinner({ text = 'Ачааллаж байна' }) {
   return (
-    <span className="dots" role="status" aria-label="Ачааллаж байна">
-      <i /><i /><i />
-    </span>
+    <div className="loader" role="status" aria-label={text}>
+      <span className="loader-stamp" aria-hidden="true">W·A</span>
+      <span className="loader-text">{text}…</span>
+    </div>
   );
 }
