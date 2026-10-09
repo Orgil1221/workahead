@@ -36,7 +36,7 @@ body {
 }
 #root { min-height: 100vh; }
 
-h1, h2, h3, h4 { font-family: var(--font-head); font-weight: 600; letter-spacing: -.01em; margin: 0 0 .5em; }
+h1, h2, h3, h4 { font-family: var(--font-head); font-weight: 700; letter-spacing: -.01em; margin: 0 0 .5em; }
 h1 { font-size: clamp(1.5rem, 4vw, 2rem); }
 h2 { font-size: 1.25rem; }
 h3 { font-size: 1.05rem; }
@@ -179,9 +179,9 @@ h3 { font-size: 1.05rem; }
 }
 .hero-title {
   font-family: var(--font-head);
-  font-size: clamp(1.45rem, 4.5vw, 2.1rem);
-  line-height: 1.18;
-  letter-spacing: -.015em;
+  font-size: clamp(1.7rem, 5vw, 2.6rem);
+  line-height: 1.16;
+  letter-spacing: -.01em;
   font-weight: 700;
   margin: 0;
 }
@@ -347,13 +347,20 @@ h3 { font-size: 1.05rem; }
   border: 1px solid var(--ink); background: var(--ink); color: var(--paper);
   cursor: pointer; text-decoration: none; white-space: nowrap;
 }
-.btn:hover { opacity: .92; }
+.btn:hover { opacity: .92; transform: translateY(-1px); }
 .btn.secondary { background: transparent; color: var(--ink); }
 .btn.secondary:hover { background: rgba(33,29,23,.06); }
+/* Landing primary — улаан accent (wa-btn--primary) */
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fffdf7; }
+.btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, black); opacity: 1; }
+/* Landing ghost — хүрээгүй тунгалаг (wa-btn--ghost) */
+.btn.ghost { background: transparent; border-color: var(--rule); color: var(--ink); }
+.btn.ghost:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); opacity: 1; }
 .btn.danger { background: var(--accent); border-color: var(--accent); }
 .btn.ghost-danger { background: transparent; border-color: transparent; color: var(--accent); }
 .btn.ghost-danger:hover { background: rgba(160,49,35,.08); }
 .btn.small { font-size: .8rem; padding: 5px 10px; }
+.btn.lg { padding: .85rem 1.6rem; font-size: 1rem; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
@@ -387,6 +394,22 @@ label { display: block; font-size: .8rem; font-weight: 600; color: var(--ink-sof
 .badge.ok { border-color: var(--ok); color: var(--ok); background: rgba(46,107,63,.07); }
 .badge.warn { border-color: var(--warn); color: var(--warn); background: rgba(160,107,0,.08); }
 .chip-row { display: flex; gap: 5px; flex-wrap: wrap; }
+
+/* ── Landing signature utilities (wa-pill / wa-link / section kicker) ── */
+.pill {
+  display: inline-block; padding: .4rem .9rem; border-radius: 999px;
+  border: 1px solid var(--rule); background: var(--paper-raised);
+  color: var(--ink-soft); font-size: .82rem; font-weight: 600;
+}
+.kicker {
+  font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--accent); font-weight: 700; margin-bottom: 10px;
+}
+.link {
+  font-weight: 700; color: var(--blue-ink);
+  border-bottom: 1px solid color-mix(in srgb, var(--blue-ink) 40%, transparent);
+}
+.link:hover { border-bottom-color: var(--blue-ink); }
 
 /* ── Question card (exam paper look) ── */
 .question-card { position: relative; }

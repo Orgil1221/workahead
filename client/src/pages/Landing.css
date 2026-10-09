@@ -40,73 +40,8 @@
   border-radius: 4px;
 }
 
-/* ---------------- buttons & pills ---------------- */
-
-.wa-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1.15rem;
-  border-radius: 999px;
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-size: 0.92rem;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-  white-space: nowrap;
-}
-
-.wa-btn:hover {
-  transform: translateY(-1px);
-}
-
-.wa-btn--ghost {
-  color: var(--ink);
-  border-color: var(--rule);
-  background: transparent;
-}
-
-.wa-btn--ghost:hover {
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
-}
-
-.wa-btn--primary {
-  background: var(--accent);
-  color: #fff;
-}
-
-.wa-btn--primary:hover {
-  background: color-mix(in srgb, var(--accent) 88%, black);
-}
-
-.wa-btn--lg {
-  padding: 0.85rem 1.6rem;
-  font-size: 1rem;
-}
-
-.wa-pill {
-  display: inline-block;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid var(--rule);
-  background: var(--paper-raised);
-  color: var(--ink-soft);
-  font-size: 0.82rem;
-  font-weight: 600;
-  margin-bottom: 1.4rem;
-}
-
-.wa-link {
-  font-weight: 700;
-  color: var(--blue-ink);
-  border-bottom: 1px solid color-mix(in srgb, var(--blue-ink) 40%, transparent);
-}
-
-.wa-link:hover {
-  border-bottom-color: var(--blue-ink);
-}
+/* ---------------- buttons: системийн .btn/.pill/.link хэрэглэнэ ---------------- */
+/* Landing-only: nav mobile + sticky CTA sizing */
 
 /* ---------------- navbar ---------------- */
 
@@ -632,7 +567,7 @@
     gap: 0.4rem;
   }
 
-  .wa-nav__actions .wa-btn {
+  .wa-nav__actions .btn {
     padding: 0.5rem 0.8rem;
     font-size: 0.85rem;
   }
@@ -704,7 +639,8 @@
 }
 
 /* УБ цаг агаарын pill */
-.wa-pill.wx-pill {
+.landing .pill { margin-bottom: 1.4rem; }
+.pill.wx-pill {
   margin-left: 0.5rem;
   font-family: var(--font-mono);
   letter-spacing: 0;
@@ -801,12 +737,12 @@
     border: 1px solid var(--rule);
     box-shadow: 0 12px 32px rgba(33, 29, 23, 0.22);
   }
-  .landing-ctabar .wa-btn {
+  .landing-ctabar .btn {
     flex: 1;
     min-height: 44px;
     font-size: 0.95rem;
   }
-  .wa-nav__actions .wa-btn {
+  .wa-nav__actions .btn {
     min-height: 44px;
     display: inline-flex;
     align-items: center;

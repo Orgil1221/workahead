@@ -384,10 +384,10 @@ export default function Landing() {
           </span>
           <div className="wa-nav__actions">
             <ThemeToggle compact />
-            <Link to="/login" className="wa-btn wa-btn--ghost">
+            <Link to="/login" className="btn ghost">
               Нэвтрэх
             </Link>
-            <Link to="/register" className="wa-btn wa-btn--primary">
+            <Link to="/register" className="btn primary">
               Бүртгүүлэх
             </Link>
           </div>
@@ -406,9 +406,9 @@ export default function Landing() {
         <section className="wa-hero">
           <div className="wa-hero__grid">
             <div className="wa-hero__copy">
-              <span className="wa-pill">Улирлын · Явцын шалгалт</span>
+              <span className="pill">Улирлын · Явцын шалгалт</span>
               {wtheme === 'auto' && wx && (
-                <span className="wa-pill wx-pill">УБ: {wx.temp}°C{wx.fx === 'rain' ? ' · Бороо' : wx.fx === 'snow' ? ' · Цас' : ''}</span>
+                <span className="pill wx-pill">УБ: {wx.temp}°C{wx.fx === 'rain' ? ' · Бороо' : wx.fx === 'snow' ? ' · Цас' : ''}</span>
               )}
               <h1 className="wa-h1">
                 Монгол Улсын Их
@@ -541,10 +541,10 @@ export default function Landing() {
             Бид бодит хичээлийн даалгавар, AI үнэлгээгээр таны шалгалтын бэлтгэлийг хамгийн богино замаар хийж өгдөг.
           </p>
           <div className="wa-about__actions">
-            <Link to="/register" className="wa-btn wa-btn--primary wa-btn--lg">
+            <Link to="/register" className="btn primary lg">
               Бүртгүүлж эхлэх
             </Link>
-            <Link to="/terms" className="wa-link">
+            <Link to="/terms" className="link">
               Үйлчилгээний нөхцөл
             </Link>
           </div>
@@ -583,10 +583,10 @@ export default function Landing() {
 
       {/* Mobile sticky CTA */}
       <div className="landing-ctabar">
-        <Link to="/register" className="wa-btn wa-btn--primary">
+        <Link to="/register" className="btn primary">
           Бүртгүүлэх
         </Link>
-        <Link to="/login" className="wa-btn wa-btn--ghost">
+        <Link to="/login" className="btn ghost">
           Нэвтрэх
         </Link>
       </div>
