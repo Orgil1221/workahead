@@ -497,6 +497,20 @@ label { display: block; font-size: .8rem; font-weight: 600; color: var(--ink-sof
 .auth-logo { text-align: center; font-family: var(--font-head); font-size: 1.8rem; font-weight: 700; margin-bottom: 4px; }
 .auth-logo span { color: var(--accent); }
 
+/* Gear-anchored жижиг popover (notification push тохиргоо) */
+.popover-scrim { position: fixed; inset: 0; z-index: 90; background: transparent; }
+.gear-popover {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 95;
+  width: min(320px, 84vw);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  box-shadow: var(--shadow), 0 12px 32px rgba(33, 29, 23, .18);
+  padding: 14px;
+  animation: pageIn .18s ease both;
+}
+.gear-popover .card { margin: 0 !important; border: none; box-shadow: none; background: transparent; padding: 0; }
+
 /* OTP — 6 тусдаа дугуйрсан хайрцаг */
 .otp-boxes { display: flex; gap: 8px; justify-content: space-between; margin: 6px 0 2px; }
 .otp-box {

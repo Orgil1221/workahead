@@ -101,27 +101,28 @@ export default function Notifications() {
 
   return (
     <>
-      <div className="page-title-row">
+      <div className="page-title-row" style={{ position: 'relative' }}>
         <h1 style={{ margin: 0 }}>Мэдэгдэл</h1>
-        <button className="icon-btn" onClick={() => setShowSettings(true)} title="Push тохиргоо" aria-label="Push тохиргоо">
+        <button className="icon-btn" onClick={() => setShowSettings((v) => !v)} title="Push тохиргоо" aria-label="Push тохиргоо">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
             <path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1m0-14.2l-2.1 2.1m-10 10l-2.1 2.1" />
           </svg>
         </button>
-      </div>
-      {showSettings && (
-        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Push тохиргоо</h3>
-              <button className="icon-btn" onClick={() => setShowSettings(false)} aria-label="Хаах">✕</button>
+        {showSettings && (
+          <>
+            <div className="popover-scrim" onClick={() => setShowSettings(false)} />
+            <div className="gear-popover">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <strong style={{ fontSize: '.9rem' }}>Push тохиргоо</strong>
+                <button className="icon-btn" onClick={() => setShowSettings(false)} aria-label="Хаах">✕</button>
+              </div>
+              <PushTestCard />
             </div>
-            <PushTestCard />
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
       {notifications.length === 0 ? (
         <div className="card"><div className="empty-state">Мэдэгдэл байхгүй.</div></div>
       ) : (
