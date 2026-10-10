@@ -18,3 +18,7 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 .dist/
+
+# Poster build fonts (re-download via script header URLs)
+poster/fonts/
+
