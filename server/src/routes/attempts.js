@@ -280,6 +280,7 @@ router.get('/progress/topics', async (req, res, next) => {
       by: ['questionId'],
       where: { attempt: { userId: req.user.id, finishedAt: { not: null } } },
       _sum: { pointsEarned: true },
+      _count: { _all: true },
     });
     const qIds = rows.map((r) => r.questionId);
     const questions = await prisma.question.findMany({
@@ -295,7 +296,7 @@ router.get('/progress/topics', async (req, res, next) => {
       for (const t of topics) {
         byTopic[t] ??= { earned: 0, possible: 0 };
         byTopic[t].earned += r._sum.pointsEarned ?? 0;
-        byTopic[t].possible += q.points;
+        byTopic[t].possible += q.points * r._count._all;
       }
     }
     const topics = Object.entries(byTopic)

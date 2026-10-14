@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import { warmup } from './api/client.js';
 import Login from './pages/Login.jsx';
@@ -33,6 +33,8 @@ import History from './pages/student/History.jsx';
 import Notifications from './pages/student/Notifications.jsx';
 import Payment from './pages/student/Payment.jsx';
 import Terms from './pages/Terms.jsx';
+
+const DashboardPreview = import.meta.env.DEV ? lazy(() => import('./pages/student/DashboardPreview.jsx')) : null;
 
 function Guard({ children, admin }) {
   const { user } = useAuth();
@@ -135,10 +137,13 @@ function Footer() {
 }
 
 export default function App() {
+  const { pathname } = useLocation();
+  const isDashboardPreview = import.meta.env.DEV && pathname === '/preview/dashboard';
   return (
     <>
-      <WarmupBanner />
+      {!isDashboardPreview && <WarmupBanner />}
       <Routes>
+        {DashboardPreview && <Route path="/preview/dashboard" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><DashboardPreview /></Suspense>} />}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import MathText from '../components/MathText.jsx';
 import './Landing.css';
 
 /* ---------- helpers ---------- */
@@ -436,26 +437,26 @@ export default function Landing() {
               <div className="wa-card">
                 {eff === 'newyear' && <SantaHat className="on-card" />}
                 <div className="wa-card__top">
-                  <span className="wa-card__tag">МУИС · Магадлалын онол</span>
+                  <span className="wa-card__tag">МУИС · Математик 1Б</span>
                   <span className="wa-card__timer">12:34</span>
                 </div>
-                <p className="wa-card__question">∫₀² (3x² + 2x) dx = ?</p>
+                <p className="wa-card__question"><MathText text={'$\\lim_{x\\to 0}\\frac{\\sin(3x)}{\\sin x} = ?$'} /></p>
                 <div className="wa-card__options">
                   <div className="wa-card__opt">
-                    <span className="wa-card__radio" />A. 12
+                    <span className="wa-card__radio" />A. 1
                   </div>
                   <div className="wa-card__opt wa-card__opt--correct">
                     <span className="wa-card__radio wa-card__radio--ok" />
-                    B. 16
+                    B. 3
                     <svg className="wa-check" viewBox="0 0 16 16" aria-hidden="true">
                       <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                   <div className="wa-card__opt">
-                    <span className="wa-card__radio" />C. 18
+                    <span className="wa-card__radio" />C. 0
                   </div>
                   <div className="wa-card__opt">
-                    <span className="wa-card__radio" />D. 20
+                    <span className="wa-card__radio" />D. 9
                   </div>
                 </div>
                 <div className="wa-stamp">

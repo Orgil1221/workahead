@@ -10,6 +10,7 @@
 - `2026-09-18 17:15 4ebbfb9 fix(bonum): BASE_URL apis.bonum.mn` — doc says prod is `https://apis.bonum.mn` (with s), was `api.bonum.mn`
 
 ## Active TODO (for next session)
+- Local uncommitted dashboard upgrade (2026-10-14): new student dashboard, development-only `/preview/dashboard`, corrected landing limit example, repeated-attempt topic denominator fix. Frontend preview uses sample data; validate authenticated API flow separately before deployment. See `ARCHITECTURE.md` for file pointers.
 - [ ] Verify `BONUM_API_BASE_URL` prod vs test for `terminal 17173149` — `NO_AUTH ${invalid.token}` seen `2026-09-18 401` if `APP_SECRET` mismatched; ask Bonum with `traceId`
 - [ ] `JWT 7d → 15m+refresh` `auth.js:12` (H1) if higher security needed
 - [ ] `CSP` enable `index.js:24` + `MathText XSS DOMPurify` `H6`

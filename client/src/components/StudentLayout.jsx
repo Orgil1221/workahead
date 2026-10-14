@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api/client.js';
 import TabBar from './TabBar.jsx';
@@ -8,7 +8,7 @@ import ThemeToggle from './ThemeToggle.jsx';
 
 const tabs = [
   { to: '/student', label: 'Нүүр', icon: 'home', end: true },
-  { to: '/student/dashboard', label: 'Дашбоард', icon: 'chart' },
+  { to: '/student/dashboard', label: 'Ахиц', icon: 'chart' },
   { to: '/student/profile', label: 'Профайл', icon: 'users' },
   { to: '/student/history', label: 'Түүх', icon: 'clock' },
   { to: '/student/payment', label: 'Төлбөр', icon: 'card' },
@@ -19,6 +19,7 @@ const SEEN_KEY = 'wa_notif_seen';
 export default function StudentLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function StudentLayout() {
         <div className="brand">Work<span>·</span>Ahead</div>
         <div className="nav-section">Оюутан</div>
         <NavLink to="/student" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Нүүр</NavLink>
-        <NavLink to="/student/dashboard" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Явцын дашбоард</NavLink>
+        <NavLink to="/student/dashboard" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Миний ахиц</NavLink>
         <NavLink to="/student/bookmarks" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Хадгалсан асуулт</NavLink>
         <NavLink to="/student/history" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Дүнгийн түүх</NavLink>
         <NavLink to="/student/notifications" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
@@ -70,7 +71,7 @@ export default function StudentLayout() {
           hasUnreadNotifications={unread > 0}
           onBellClick={() => navigate('/student/notifications')}
         />
-        <main className="content">
+        <main className={pathname === '/student/dashboard' ? 'content dashboard-content' : 'content'}>
           <div className="page-enter" key={location.pathname}>
             <Outlet />
           </div>
