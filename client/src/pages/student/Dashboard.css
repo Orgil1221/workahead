@@ -1,5 +1,5 @@
 .dashboard-content { max-width: 1200px; padding: 34px 32px 48px; }
-.app-shell:has(.learning-dashboard) { background: var(--paper); }
+.app-shell:has(.learning-dashboard) { background: var(--paper); overflow-x: clip; }
 .learning-dashboard {
   --ld-accent: #9e4937;
   --ld-accent-soft: #f5e9e2;
@@ -183,7 +183,7 @@ a.ld-attempt:hover .ld-attempt-info > strong { color: var(--ld-accent); }
   .ld-next-step { align-items: flex-start; gap: 12px; padding: 20px; }
   .ld-next-step > div { flex: 1; }
   .ld-next-step h2 { font-size: 13px; }
-  .ld-next-link { width: 100%; margin-left: 56px; }
+  .ld-next-link { box-sizing: border-box; flex: 0 1 calc(100% - 56px); width: auto; min-width: 0; margin-left: 56px; }
   .ld-preview-bar { padding: 12px 16px; }
   .ld-preview-shell .main-col { padding-bottom: 0; }
   .learning-dashboard .ld-footnote { line-height: 1.8; padding: 0 15px; }
