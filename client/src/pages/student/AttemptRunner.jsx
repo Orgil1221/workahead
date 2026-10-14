@@ -1,418 +1,217 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { api } from '../../api/client.js';
-import Spinner from '../../components/Spinner.jsx';
-import FlagModal from '../../components/FlagModal.jsx';
+import { useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import MathText from '../../components/MathText.jsx';
-import 'mathlive';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useStudy, useStudyLoad } from './StudyContext.jsx';
+import { StudyDialog, StudyIcon, StudyState } from './StudyUI.jsx';
+import StudyResult from './StudyResult.jsx';
+import 'mathlive';
+
+function MathAnswer({ questionId, initialValue, disabled, onChange }) {
+  const fieldRef = useRef(null);
+  const changeRef = useRef(onChange);
+  changeRef.current = onChange;
+  useEffect(() => {
+    const field = fieldRef.current;
+    field.value = initialValue || '';
+    const handleInput = () => changeRef.current(field.getValue('latex'));
+    field.addEventListener('input', handleInput);
+    return () => field.removeEventListener('input', handleInput);
+  }, [questionId]);
+  useEffect(() => { fieldRef.current.readOnly = disabled; }, [disabled]);
+  return <><label className="sl-answer-label" htmlFor={'answer-' + questionId}>Таны бодолт / хариулт</label><math-field ref={fieldRef} id={'answer-' + questionId} aria-label="Таны бодолт / хариулт" virtual-keyboard-mode="onfocus" /><p className="sl-note">Томьёоны гараар эсвэл өөрийн гараар хариултаа оруулна уу.</p></>;
+}
 
 export default function AttemptRunner() {
   const { attemptId } = useParams();
-  const [attempt, setAttempt] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [idx, setIdx] = useState(0);
-  const [answers, setAnswers] = useState({}); // questionId → { given, earned }
-  const [flagging, setFlagging] = useState(null);
-  const [bookmarks, setBookmarks] = useState({});
-  const [finished, setFinished] = useState(false);
-  const [grading, setGrading] = useState(false);
-  const [gradeStep, setGradeStep] = useState(0);
-
-  const GRADING_STEPS = [
-    'Бодолтуудыг илгээж байна…',
-    'AI асуултуудыг уншиж байна…',
-    'Оноо гаргаж байна…',
-    'Иж бүрэн тайлбар бичиж байна…',
-  ];
-  useEffect(() => {
-    if (!grading) { setGradeStep(0); return; }
-    const t = setInterval(() => setGradeStep((s) => (s + 1) % GRADING_STEPS.length), 3500);
-    return () => clearInterval(t);
-  }, [grading]);
-  const [secondsLeft, setSecondsLeft] = useState(null);
-  const toast = useToast();
-
-  // Load the attempt
-  useEffect(() => {
-    api(`/attempts/${attemptId}`).then((d) => {
-      setAttempt(d.attempt);
-      if (d.attempt.finishedAt) setFinished(true);
-    }).catch(() => {});
-  }, [attemptId]);
-
-  // Load exam questions once we know the attempt — per-attempt random shuffle for test
-  useEffect(() => {
-    if (!attempt) return;
-    api(`/exams/${attempt.examId}?attemptId=${attempt.id}`)
-      .then((d) => setQuestions(d.exam.questions))
-      .catch(() => {});
-    api('/bookmarks')
-      .then((d) => setBookmarks(Object.fromEntries(d.bookmarks.map((b) => [b.question.id, true]))))
-      .catch(() => {});
-  }, [attempt]);
-
-  // Timer — зөвхөн Задгай (TIMED) горимд
-  useEffect(() => {
-    if (!attempt || finished) return;
-    if (attempt.mode !== 'TIMED') return;
-    const started = new Date(attempt.startedAt).getTime();
-    const durationMs = (attempt.exam?.durationMin ?? 90) * 60000;
-    setSecondsLeft(Math.max(0, Math.floor((started + durationMs - Date.now()) / 1000)));
-    const t = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) { clearInterval(t); finish(); return 0; }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attempt, finished]);
-
-  const isTest = attempt?.mode === 'TEST' || attempt?.format === 'TEST';
-  const isZadgai = attempt?.mode === 'TIMED';
-  const q = questions[idx];
-  const answeredCount = Object.keys(answers).length;
-
-  // MathLive <math-field> — зөвхөн Задгайд
-  const mfRef = useRef(null);
-  const qid = q?.id;
-  useEffect(() => {
-    if (isTest) return;
-    const mf = mfRef.current;
-    if (!mf || !qid) return;
-    mf.value = answers[qid]?.given ?? '';
-    let timer;
-    const onInput = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => changeAnswer(qid, mf.getValue('latex')), 500);
-    };
-    mf.addEventListener('input', onInput);
-    return () => {
-      clearTimeout(timer);
-      mf.removeEventListener('input', onInput);
-    };
-  }, [qid, isTest]);
-
-  const saveTimers = useRef({});
-  const saveAnswer = (qid, given) =>
-    api(`/attempts/${attemptId}/answers`, { method: 'POST', body: { questionId: qid, givenAnswer: given } })
-      .then((d) => {
-        // TEST-д шууд оноо шинэчлэх
-        if (d.answer) {
-          setAnswers((a) => ({ ...a, [qid]: { ...(a[qid] || {}), given, earned: d.answer.pointsEarned, isCorrect: d.answer.isCorrect } }));
-        }
-      })
-      .catch((e) => toast(e.message));
-
-  const changeAnswer = (qid, value) => {
-    setAnswers((a) => ({ ...a, [qid]: { ...(a[qid] ?? { earned: 0 }), given: value } }));
-    clearTimeout(saveTimers.current[qid]);
-    saveTimers.current[qid] = setTimeout(() => saveAnswer(qid, value), 700);
-  };
-
-  const selectTestChoice = (choiceKey) => {
-    if (!q) return;
-    setAnswers((a) => ({ ...a, [q.id]: { ...(a[q.id] || {}), given: choiceKey } }));
-    saveAnswer(q.id, choiceKey);
-  };
-
-  const toggleBookmark = async (qid) => {
-    try {
-      if (bookmarks[qid]) { await api(`/bookmarks/${qid}`, { method: 'DELETE' }); setBookmarks((b) => { const n = { ...b }; delete n[qid]; return n; }); }
-      else { await api(`/bookmarks/${qid}`, { method: 'POST' }); setBookmarks((b) => ({ ...b, [qid]: true })); }
-    } catch (e) { toast(e.message); }
-  };
-
-  const finish = async () => {
-    if (grading) return;
-    try {
-      setGrading(true);
-      await Promise.all(
-        Object.entries(answers)
-          .filter(([, a]) => a?.given?.trim())
-          .map(([qid, a]) => api(`/attempts/${attemptId}/answers`, { method: 'POST', body: { questionId: qid, givenAnswer: a.given } }).catch(() => {}))
-      );
-      // Задгайд л AI дуудна, Тестэд шууд дуусгана
-      if (!isTest) {
-        await api(`/attempts/${attemptId}/ai-grade`, { method: 'POST' }).catch(() => {});
-      }
-      const d = await api(`/attempts/${attemptId}/finish`, { method: 'POST' });
-      setFinished(true);
-      return d.attempt;
-    } catch (e) { toast(e.message); }
-    finally { setGrading(false); }
-  };
-
-  const timeLabel = useMemo(() => {
-    if (secondsLeft == null) return null;
-    const m = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
-    const s = String(secondsLeft % 60).padStart(2, '0');
-    return `${m}:${s}`;
-  }, [secondsLeft]);
-
-  if (!attempt || (!questions.length && !finished)) return <Spinner />;
-
-  if (finished) {
-    return <ResultView attemptId={attemptId} onBack={() => window.location.assign('/student/history')} />;
-  }
-
-  return (
-    <>
-      {/* Header */}
-      <div className="page-title-row">
-        <div>
-          <p className="small muted" style={{ margin: 0 }}>{attempt.exam.title} · <span className={`badge ${isTest ? 'blue' : ''}`} style={{ verticalAlign: 'middle' }}>{isTest ? 'Тест' : 'Задгай даалгавар'}</span></p>
-          <h2 style={{ marginBottom: 0 }}>
-            Асуулт <span className="mono">{idx + 1}</span>/{questions.length}
-          </h2>
-        </div>
-        {timeLabel != null && (
-          <span className={`timer-pill mono ${secondsLeft < 300 ? 'warn' : ''}`}>{timeLabel}</span>
-        )}
-        {timeLabel == null && (
-          <button className="btn small" onClick={() => { finish().then(() => toast(isTest ? 'Тест дууслаа' : 'Задгай дууслаа')); }}>Дуусгах</button>
-        )}
-      </div>
-
-      {/* Progress */}
-      <div className="progress-track" style={{ marginBottom: 14 }}>
-        <div className="progress-fill" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
-      </div>
-
-      {/* Question */}
-      {q && (
-        <div className="card question-card">
-          <span className="question-points mono">{q.points} оноо</span>
-          <span className="question-num mono">№{q.order}</span>
-          <span className="chip-row" style={{ marginLeft: 4 }}>
-            {q.topic && <span className="badge blue">{q.topic}</span>}
-            {(q.tags || []).filter((t) => t !== q.topic).slice(0, 2).map((t) => <span key={t} className="badge">{t}</span>)}
-            {q.type === 'test' && <span className="badge blue">Тест</span>}
-            {q.type === 'open' && <span className="badge">Задгай</span>}
-          </span>
-          <div className="q-prompt" style={{ margin: '10px 0' }}><MathText text={q.prompt} /></div>
-
-          {(q.type === 'test' || (isTest && q.choices && q.choices.length === 4)) ? (
-            // TEST — 4 сонголт (зөвхөн choices-той асуултууд)
-            <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-              {(q.choices || []).map((c) => {
-                const selected = answers[q.id]?.given === c.key;
-                return (
-                  <button
-                    key={c.key}
-                    onClick={() => selectTestChoice(c.key)}
-                    className={`card ${selected ? 'selected' : ''}`}
-                    style={{
-                      textAlign: 'left',
-                      padding: '12px 14px',
-                      border: selected ? '2px solid var(--blue-ink)' : '1px solid var(--rule)',
-                      background: selected ? 'color-mix(in srgb, var(--blue-ink) 10%, var(--paper-raised))' : 'var(--paper-raised)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                      transition: 'all 0.15s',
-                      color: 'var(--ink)',
-                    }}
-                  >
-                    <span className={`mono`} style={{
-                      width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: selected ? 'var(--blue-ink)' : 'transparent',
-                      border: selected ? 'none' : '1px solid var(--rule)',
-                      color: selected ? 'var(--paper)' : 'var(--ink-soft)',
-                      fontWeight: 700, flexShrink: 0,
-                    }}>{c.key}</span>
-                    <span style={{ flex: 1, color: 'var(--ink)' }}><MathText text={c.text} /></span>
-                    {selected && <span style={{ color: 'var(--blue-ink)', fontWeight: 700 }}>✓</span>}
-                  </button>
-                );
-              })}
-              {(!q.choices || q.choices.length !== 4) && <p className="small" style={{ color: 'var(--warn)' }}>Энэ асуулт тест биш — Задгай хэлбэрээр хариулна. Админ 4 сонголт + correct_choice оруулаагүй.</p>}
-            </div>
-          ) : (
-            // Задгай — math-field
-            <>
-              <div className="label-row">
-                <label htmlFor={`ans-${q.id}`}>Таны бодолт / хариулт</label>
-                <span className="faint small mono">LaTeX · $...$</span>
-              </div>
-              <math-field
-                id={`ans-${q.id}`}
-                ref={mfRef}
-                class="answer-mathfield"
-                virtual-keyboard-mode="onfocus"
-              />
-              <p className="small faint" style={{ marginTop: 10, marginBottom: 0 }}>
-                Зөв хариулттай яг таарвал автоматаар бүтэн оноо өгнө, таараагүй бол AI таны бодолтыг уншиж оноо + тайлбар өгнө.
-              </p>
-            </>
-          )}
-
-          <hr className="divider-dashed" />
-          <div className="btn-row" style={{ justifyContent: 'space-between' }}>
-            <span className="btn-row">
-              <button className="btn secondary small" disabled={idx === 0} onClick={() => setIdx(idx - 1)}>← Өмнөх</button>
-              <button className="btn secondary small"
-                disabled={idx >= questions.length - 1} onClick={() => setIdx(idx + 1)}>Дараах →</button>
-            </span>
-            <span className="btn-row">
-              <button className={`icon-btn ${bookmarks[q.id] ? 'active' : ''}`} title="Bookmark"
-                onClick={() => toggleBookmark(q.id)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={bookmarks[q.id] ? 'currentColor' : 'none'}
-                  stroke="currentColor" strokeWidth="1.8"><path d="M6 3h12v18l-6-4-6 4V3z" /></svg>
-              </button>
-              <button className="icon-btn" title="Flag — алдаа мэдэгдэх" onClick={() => setFlagging(q)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M5 21V4m0 1h13l-3 4 3 4H5" /></svg>
-              </button>
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Question navigator dots */}
-      <div className="btn-row" style={{ justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 6 }}>
-        {questions.map((qq, i) => {
-          const ans = answers[qq.id];
-          const isSelected = i === idx;
-          const isAnswered = !!ans?.given;
-          return (
-            <button key={qq.id} className={`btn small ${isSelected ? '' : isAnswered ? 'secondary' : 'ghost'}`}
-              style={{ minWidth: 36, border: isAnswered && !isSelected ? '1px solid var(--blue-ink)' : undefined }}
-              onClick={() => setIdx(i)}>
-              {isAnswered ? '●' : i + 1}
-            </button>
-          );
-        })}
-      </div>
-
-      <div style={{ textAlign: 'center', paddingBottom: 16 }}>
-        <button className="btn danger" disabled={grading} onClick={finish}>
-          {grading ? (isTest ? 'Дүгнэж байна…' : 'AI үнэлж байна…') : isTest ? `Тестийг дуусгах (${answeredCount}/${questions.length} хариулсан)` : `Задгайг дуусгах (${answeredCount}/${questions.length} хариулсан)`}
-        </button>
-      </div>
-
-      {grading && !isTest && (
-        <div className="grading-overlay" role="status" aria-live="polite">
-          <div className="card grading-card">
-            <svg className="grading-ring" viewBox="0 0 50 50" width="64" height="64" aria-hidden="true">
-              <circle cx="25" cy="25" r="20" fill="none" stroke="rgba(216,208,189,.5)" strokeWidth="5" />
-              <circle cx="25" cy="25" r="20" fill="none" stroke="var(--blue-ink)" strokeWidth="5"
-                strokeLinecap="round" strokeDasharray="90 126" />
-            </svg>
-            <strong>AI бодолтыг үнэлж байна</strong>
-            <p className="small muted" style={{ margin: '6px 0 10px' }}>{GRADING_STEPS[gradeStep]}</p>
-            <span className="dots"><i /><i /><i /></span>
-            <p className="faint small" style={{ margin: '8px 0 0' }}>
-              Асуултын тооноос хамааран ~10–30 секунд зарцуулна
-            </p>
-          </div>
-        </div>
-      )}
-      {grading && isTest && (
-        <div className="grading-overlay" role="status" aria-live="polite">
-          <div className="card grading-card">
-            <strong>Тест дүгнэж байна…</strong>
-            <p className="small muted">Шууд автоматаар шалгана</p>
-          </div>
-        </div>
-      )}
-
-      {flagging && <FlagModal question={flagging} onClose={() => setFlagging(null)} />}
-      {timeLabel === '00:00' && null}
-    </>
-  );
+  const { request } = useStudy();
+  const { data, loading, error, retry } = useStudyLoad(async () => {
+    const result = await request('/attempts/' + attemptId);
+    if (result.attempt.finishedAt) return result;
+    const exam = await request('/exams/' + result.attempt.examId + '?attemptId=' + attemptId);
+    return { ...result, questions: exam.exam.questions };
+  }, [request, attemptId]);
+  if (loading || error) return <div className="sl-page"><StudyState loading={loading} error={error} retry={retry} /></div>;
+  if (data.attempt.finishedAt) return <StudyResult attemptId={attemptId} initialAttempt={data.attempt} />;
+  if (!data.questions.length) return <div className="sl-page"><StudyState title="Шалгалтын бодлого олдсонгүй" /></div>;
+  return <ActiveAttempt key={attemptId} attempt={data.attempt} questions={data.questions} />;
 }
 
-function ResultView({ attemptId, onBack }) {
-  const [data, setData] = useState(null);
-  useEffect(() => { api(`/attempts/${attemptId}`).then((d) => setData(d.attempt)).catch(() => {}); }, [attemptId]);
-  if (!data) return <Spinner />;
+function ActiveAttempt({ attempt, questions }) {
+  const { request } = useStudy();
+  const toast = useToast();
+  const [index, setIndex] = useState(0);
+  const [answers, setAnswers] = useState(() => Object.fromEntries((attempt.answers || []).map((answer) => [answer.questionId || answer.question.id, answer.givenAnswer || ''])));
+  const answersRef = useRef(answers);
+  const persistedRef = useRef({ ...answers });
+  const timers = useRef({});
+  const queues = useRef({});
+  const [saveStates, setSaveStates] = useState({});
+  const [bookmarks, setBookmarks] = useState(() => Object.fromEntries(questions.map((question) => [question.id, !!question.bookmarked])));
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
+  const bookmarkLock = useRef(false);
+  const [dialog, setDialog] = useState(null);
+  const [reason, setReason] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportError, setReportError] = useState('');
+  const reportLock = useRef(false);
+  const [finishing, setFinishing] = useState(false);
+  const finishLock = useRef(false);
+  const [finishError, setFinishError] = useState('');
+  const [stage, setStage] = useState('');
+  const [finished, setFinished] = useState(false);
+  const [gradingNotice, setGradingNotice] = useState('');
+  const [secondsLeft, setSecondsLeft] = useState(null);
+  const autoFinished = useRef(false);
+  const finishRef = useRef(null);
+  const question = questions[index];
+  const isTest = attempt.mode === 'TEST' || attempt.format === 'TEST';
+  const hasChoices = question.type === 'test' || (isTest && question.choices?.length === 4);
+  const answeredCount = questions.filter((item) => answers[item.id]?.trim()).length;
+  const expired = secondsLeft === 0;
+  const locked = finishing || expired;
+  const saveState = saveStates[question.id] || (answers[question.id] ? 'saved' : 'empty');
 
-  const percent = data.totalPoints ? Math.round((data.score / data.totalPoints) * 100) : 0;
-  const correct = data.answers.filter((a) => a.isCorrect).length;
-  const isTest = data.mode === 'TEST' || data.format === 'TEST';
+  function queueSave(questionId, value) {
+    const previous = queues.current[questionId] || Promise.resolve();
+    const pending = previous.catch(() => {}).then(async () => {
+      if (persistedRef.current[questionId] !== value) {
+        await request('/attempts/' + attempt.id + '/answers', { method: 'POST', body: { questionId, givenAnswer: value } });
+        persistedRef.current[questionId] = value;
+      }
+      if (answersRef.current[questionId] === value) setSaveStates((current) => ({ ...current, [questionId]: 'saved' }));
+    }).catch((error) => {
+      if (answersRef.current[questionId] === value) setSaveStates((current) => ({ ...current, [questionId]: 'error' }));
+      throw error;
+    });
+    queues.current[questionId] = pending;
+    return pending;
+  }
 
-  return (
-    <>
-      <h1>Үр дүн <span className={`badge ${isTest ? 'blue' : ''}`} style={{ verticalAlign: 'middle', marginLeft: 8 }}>{isTest ? 'Тест' : 'Задгай даалгавар'}</span></h1>
-      <div className="card" style={{ textAlign: 'center', padding: 28 }}>
-        <div className="stat-value mono" style={{ fontSize: '2.4rem', color: percent >= 60 ? 'var(--ok)' : 'var(--accent)' }}>
-          {data.score}/{data.totalPoints}
-        </div>
-        <p className="muted mono">{percent}% · {correct}/{data.answers.length} асуулт дээр оноо авсан</p>
-        <div className="progress-track" style={{ marginTop: 10 }}>
-          <div className={`progress-fill ${percent >= 80 ? 'high' : percent < 50 ? 'low' : ''}`} style={{ width: `${percent}%` }} />
-        </div>
-      </div>
+  function changeAnswer(questionId, value, immediate = false) {
+    if (finishLock.current || expired) return;
+    answersRef.current = { ...answersRef.current, [questionId]: value };
+    setAnswers(answersRef.current);
+    setSaveStates((current) => ({ ...current, [questionId]: 'pending' }));
+    clearTimeout(timers.current[questionId]);
+    if (immediate) queueSave(questionId, value).catch(() => {});
+    else timers.current[questionId] = setTimeout(() => queueSave(questionId, value).catch(() => {}), 600);
+  }
 
-      {data.answers.map((a) => {
-        const q = a.question;
-        const hasChoices = Array.isArray(q.choices) && q.choices.length === 4;
-        const isQTest = q.type === 'test' || (isTest && hasChoices);
-        return (
-          <div className="card" key={a.id}>
-            <span className="question-num mono">№{q.order}</span>
-            <span className="badge mono" style={{ float: 'right' }}>{a.pointsEarned}/{q.points} {a.isCorrect ? '✓' : '✗'}</span>
-            {isQTest && hasChoices && <span className="badge blue" style={{ float: 'right', marginRight: 6 }}>Тест</span>}
-            <div
-              className="small"
-              style={{
-                margin: '6px 0',
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}
-            >
-              <MathText text={q.prompt} />
-            </div>
-            {isQTest && hasChoices ? (
-              <>
-                <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-                  {(q.choices || []).map((c) => {
-                    // Correct choice may be shuffled per attempt — use server's correctChoice if available, else q.correctChoice
-                    const isGiven = String(a.givenAnswer || '').trim().toUpperCase() === String(c.key).toUpperCase();
-                    const isCorrectKey = String(q.correctChoice || '').trim().toUpperCase() === String(c.key).toUpperCase();
-                    return (
-                      <span key={c.key} className="badge" style={{
-                        justifyContent: 'flex-start', whiteSpace: 'normal', textAlign: 'left',
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '8px 10px',
-                        background: isCorrectKey ? 'color-mix(in srgb, var(--ok) 14%, transparent)' : isGiven && !isCorrectKey ? 'color-mix(in srgb, var(--accent) 13%, transparent)' : 'var(--paper)',
-                        border: isGiven || isCorrectKey ? '1px solid var(--rule)' : '1px solid transparent',
-                        color: isCorrectKey ? 'var(--ink)' : isGiven ? 'var(--ink)' : 'var(--ink-soft)',
-                        opacity: 1,
-                      }}>
-                        <span className="mono" style={{ marginRight: 2, color: isCorrectKey ? 'var(--ok)' : isGiven && !isCorrectKey ? 'var(--accent)' : 'var(--ink-faint)' }}>{c.key}.</span>
-                        <span style={{ flex: 1, color: 'var(--ink)' }}><MathText text={c.text} /></span>
-                        {isGiven && <span className="mono" style={{ marginLeft: 6, color: isCorrectKey ? 'var(--ok)' : 'var(--accent)' }}>{isCorrectKey ? '✓ таны хариулт (зөв)' : '✗ таны хариулт'}</span>}
-                        {!isGiven && isCorrectKey && <span className="mono" style={{ marginLeft: 6, color: 'var(--ok)' }}>← зөв хариулт</span>}
-                      </span>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <>
-                {a.givenAnswer && <p className="faint small mono" style={{ margin: 0 }}>Бодолт: {a.givenAnswer.slice(0, 180)}</p>}
-                {q.answer && <div className="small" style={{ marginTop: 6 }}><strong className="small">Зөв хариулт: </strong><MathText text={q.answer} /></div>}
-                {q.modelSolution && <div className="small" style={{ marginTop: 4 }}><strong className="small">Бодолт: </strong><MathText text={q.modelSolution} /></div>}
-                {a.feedback && (
-                  <div className="small ai-feedback" style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(37,99,235,0.06)', borderRadius: 8 }}>
-                    <strong className="small">{a.gradedBy === 'AUTO' ? 'Автомат: ' : 'AI үнэлгээ: '}</strong>
-                    <MathText text={a.feedback} />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        );
-      })}
+  function navigateQuestion(nextIndex) {
+    clearTimeout(timers.current[question.id]);
+    if (answersRef.current[question.id] !== undefined) queueSave(question.id, answersRef.current[question.id]).catch(() => {});
+    setIndex(nextIndex);
+    document.querySelector('.sl-question-top')?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
 
-      <Link to="/student/dashboard" className="btn" style={{ marginRight: 8 }}>Дашбоард руу</Link>
-      <button className="btn secondary" onClick={onBack}>Дүнгийн түүх рүү</button>
-    </>
-  );
+  useEffect(() => {
+    const warnUnsaved = (event) => {
+      if (finishLock.current || Object.entries(answersRef.current).some(([questionId, value]) => persistedRef.current[questionId] !== value)) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', warnUnsaved);
+    return () => {
+      window.removeEventListener('beforeunload', warnUnsaved);
+      Object.values(timers.current).forEach(clearTimeout);
+      if (!finishLock.current) Object.entries(answersRef.current).forEach(([questionId, value]) => {
+        if (persistedRef.current[questionId] !== value) queueSave(questionId, value).catch(() => {});
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    if (attempt.mode !== 'TIMED' || finished) return;
+    const deadline = new Date(attempt.startedAt).getTime() + (attempt.exam?.durationMin ?? 90) * 60000;
+    const tick = () => setSecondsLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [attempt, finished]);
+
+  useEffect(() => {
+    if (secondsLeft === 0 && !autoFinished.current && !finished) {
+      autoFinished.current = true;
+      finishRef.current();
+    }
+  }, [secondsLeft, finished]);
+
+  async function finish() {
+    if (finishLock.current) return;
+    finishLock.current = true;
+    setFinishing(true);
+    setDialog('finish');
+    setFinishError('');
+    setStage('Хариултуудыг хадгалж байна…');
+    try {
+      Object.values(timers.current).forEach(clearTimeout);
+      const saves = Object.entries(answersRef.current).map(([questionId, value]) => queueSave(questionId, value));
+      const results = await Promise.allSettled(saves);
+      if (results.some((result) => result.status === 'rejected')) throw new Error('SAVE_FAILED');
+      if (!isTest) {
+        setStage('Бодолтын үнэлгээг хүлээж байна…');
+        try {
+          const grading = await request('/attempts/' + attempt.id + '/ai-grade', { method: 'POST' });
+          if (!grading.enabled) setGradingNotice('AI үнэлгээ боломжгүй байсан тул одоогийн автомат үнэлгээг харуулж байна.');
+        } catch { setGradingNotice('AI үнэлгээ авахад алдаа гарсан. Одоогийн автомат үнэлгээг харуулж байна.'); }
+      }
+      setStage('Дүнг нэгтгэж байна…');
+      await request('/attempts/' + attempt.id + '/finish', { method: 'POST' });
+      setFinished(true);
+      setDialog(null);
+    } catch (error) {
+      setFinishError(error.message === 'SAVE_FAILED' ? 'Зарим хариулт хадгалагдаагүй тул шалгалтыг дуусгасангүй. Холболтоо шалгаад дахин оролдоорой.' : 'Шалгалтыг дуусгаж чадсангүй. Хариултууд хадгалагдсан; дахин оролдоно уу.');
+    } finally { finishLock.current = false; setFinishing(false); }
+  }
+  finishRef.current = finish;
+
+  async function toggleBookmark() {
+    if (bookmarkLock.current) return;
+    bookmarkLock.current = true;
+    setBookmarkBusy(true);
+    const questionId = question.id;
+    const saved = bookmarks[questionId];
+    try {
+      await request('/bookmarks/' + questionId, { method: saved ? 'DELETE' : 'POST' });
+      setBookmarks((current) => ({ ...current, [questionId]: !saved }));
+      toast(saved ? 'Хадгалсан бодлогоос хаслаа' : 'Бодлогыг хадгаллаа');
+    } catch { toast('Бодлогыг хадгалж чадсангүй. Дахин оролдоно уу.'); }
+    finally { bookmarkLock.current = false; setBookmarkBusy(false); }
+  }
+
+  async function report(event) {
+    event.preventDefault();
+    if (!reason.trim() || reportLock.current) return;
+    reportLock.current = true;
+    setReportBusy(true);
+    setReportError('');
+    try {
+      await request('/flags', { method: 'POST', body: { questionId: question.id, reason: reason.trim() } });
+      setDialog(null);
+      setReason('');
+      toast('Мэдээллийг илгээлээ. Баярлалаа.');
+    } catch { setReportError('Илгээж чадсангүй. Дахин оролдоно уу.'); }
+    finally { reportLock.current = false; setReportBusy(false); }
+  }
+
+  if (finished) return <StudyResult attemptId={attempt.id} gradingNotice={gradingNotice} />;
+  const timeLabel = secondsLeft === null ? '—' : String(Math.floor(secondsLeft / 60)).padStart(2, '0') + ':' + String(secondsLeft % 60).padStart(2, '0');
+  return <div className="sl-page">
+    <header className="sl-run-top"><div><div className="sl-eyebrow">{isTest ? 'ТЕСТ / ХУГАЦААГҮЙ' : 'ЗАДГАЙ / ХУГАЦААТАЙ'}</div><h1>{attempt.exam.title}</h1></div>{attempt.mode === 'TIMED' && <div className={'sl-timer' + (secondsLeft !== null && secondsLeft < 300 ? ' is-urgent' : '')} role="timer" aria-label={'Үлдсэн хугацаа ' + timeLabel}><StudyIcon name="clock" size={18} />{timeLabel}</div>}</header>
+    {expired && <p className="sl-error" role="status">Хугацаа дууссан. Хадгалсан хариултуудаар дүнг гаргана.</p>}
+    <div className="sl-run-grid">
+      <section className="sl-card sl-question" aria-label="Одоогийн бодлого">
+        <div className="sl-question-top"><div><h2>Бодлого {String(index + 1).padStart(2, '0')} <span className="sl-caption">/ {questions.length}</span></h2><span className="sl-caption">{question.topic || 'Бодлого'} · {question.points} оноо</span></div><div className="sl-actions"><button className="sl-icon-button" aria-label="Бодлого хадгалах" title="Бодлого хадгалах" aria-pressed={!!bookmarks[question.id]} disabled={bookmarkBusy || finishing} onClick={toggleBookmark}><StudyIcon name="bookmark" /></button><button className="sl-icon-button" aria-label="Алдаа мэдээлэх" title="Алдаа мэдээлэх" disabled={finishing} onClick={() => { setReportError(''); setDialog('report'); }}><StudyIcon name="flag" /></button></div></div>
+        <div className="sl-math sl-question-prompt"><MathText text={question.prompt} /></div>
+        {hasChoices && question.choices?.length === 4 ? <fieldset className="sl-choices" disabled={locked}><legend>Зөв хариултыг сонгоно уу.</legend>{question.choices.map((choice) => <label className="sl-choice" key={question.id + choice.key}><input type="radio" name={'choice-' + question.id} value={choice.key} checked={answers[question.id] === choice.key} onChange={() => changeAnswer(question.id, choice.key, true)} /><span className="sl-choice-letter">{choice.key}</span><span className="sl-math"><MathText text={choice.text} /></span>{answers[question.id] === choice.key && <StudyIcon name="check" size={18} />}</label>)}</fieldset> : hasChoices ? <p className="sl-error">Энэ тестийн сонголт дутуу байна. Алдаа мэдээлэх товчоор бидэнд мэдэгдэнэ үү.</p> : <MathAnswer key={question.id} questionId={question.id} initialValue={answers[question.id]} disabled={locked} onChange={(value) => changeAnswer(question.id, value)} />}
+        <div className={'sl-save-status is-' + saveState} role="status">{saveState === 'saved' && <StudyIcon name="check" size={14} />}{saveState === 'saved' ? 'Хариулт хадгалагдсан' : saveState === 'pending' ? 'Хадгалж байна…' : saveState === 'error' ? 'Хадгалж чадсангүй.' : 'Хариултыг автоматаар хадгална.'}{saveState === 'error' && <button className="sl-button" disabled={finishing} onClick={() => queueSave(question.id, answersRef.current[question.id]).catch(() => {})}>Дахин хадгалах</button>}</div>
+        <div className="sl-question-footer"><button className="sl-button" disabled={index === 0 || finishing} onClick={() => navigateQuestion(index - 1)}><StudyIcon name="back" size={16} />Өмнөх</button>{index < questions.length - 1 ? <button className="sl-button sl-button-primary" disabled={finishing} onClick={() => navigateQuestion(index + 1)}>Дараах<StudyIcon name="arrow" size={16} /></button> : <button className="sl-button sl-button-green" disabled={finishing} onClick={() => setDialog('finish')}>Дуусгах<StudyIcon name="check" size={16} /></button>}</div>
+      </section>
+      <aside className="sl-card sl-navigator"><div className="sl-row"><h2>Хариултын явц</h2><span className="sl-code">{answeredCount}/{questions.length}</span></div><div className="sl-progress" role="progressbar" aria-label="Хариулсан бодлого" aria-valuenow={answeredCount} aria-valuemin={0} aria-valuemax={questions.length}><span style={{ width: answeredCount / questions.length * 100 + '%' }} /></div><nav className="sl-question-numbers" aria-label="Бодлогын дугаар">{questions.map((item, position) => <button key={item.id} className={answers[item.id]?.trim() ? 'is-answered' : ''} aria-current={position === index ? 'step' : undefined} aria-label={'Бодлого ' + (position + 1) + (answers[item.id]?.trim() ? ', хариулсан' : ', хариулаагүй')} disabled={finishing} onClick={() => navigateQuestion(position)}>{position + 1}</button>)}</nav><div className="sl-legend"><span>Хариулсан</span><span>Хариулаагүй</span></div><button className="sl-button sl-button-primary sl-full" disabled={finishing} onClick={() => setDialog('finish')}>Шалгалт дуусгах</button><p className="sl-note">Дуусгахаас өмнө хариултаа өөрчилж болно.</p></aside>
+    </div>
+    {dialog === 'finish' && <StudyDialog title={finishing ? 'Шалгалтыг дуусгаж байна' : 'Шалгалтаа дуусгах уу?'} busy={finishing} onClose={() => setDialog(null)}><div className="sl-stats"><div className="sl-stat"><strong>{questions.length}</strong><span>Нийт</span></div><div className="sl-stat"><strong>{answeredCount}</strong><span>Хариулсан</span></div><div className="sl-stat"><strong>{questions.length - answeredCount}</strong><span>Хариулаагүй</span></div></div><p>{finishing ? stage : questions.length > answeredCount ? 'Хариулаагүй бодлогод оноо тооцохгүй. Дуусгасны дараа хариулт өөрчлөх боломжгүй.' : 'Бүх бодлогод хариулсан байна. Дуусгасны дараа дүн, зөв хариуг харуулна.'}</p>{finishError && <p className="sl-error" role="alert">{finishError}</p>}<div className="sl-actions"><button className="sl-button" disabled={finishing} onClick={() => setDialog(null)}>Буцах</button><button className="sl-button sl-button-green" disabled={finishing} onClick={finish}>{finishing ? 'Түр хүлээнэ үү…' : 'Дуусгаж, дүн харах'}</button></div></StudyDialog>}
+    {dialog === 'report' && <StudyDialog title="Бодлогын алдаа мэдээлэх" busy={reportBusy} onClose={() => setDialog(null)}><form onSubmit={report}><label className="sl-note" htmlFor="study-report">Бодлого {index + 1} — ямар алдаа байгааг тайлбарлана уу.</label><textarea id="study-report" autoFocus required maxLength={2000} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Нөхцөл эсвэл хариултын алдаа…" />{reportError && <p className="sl-error" role="alert">{reportError}</p>}<div className="sl-actions"><button className="sl-button sl-button-green" disabled={reportBusy || !reason.trim()}>{reportBusy ? 'Илгээж байна…' : 'Мэдээлэл илгээх'}</button></div></form></StudyDialog>}
+  </div>;
 }

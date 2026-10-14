@@ -1,0 +1,202 @@
+.content.payment-content { max-width: 1180px; padding: 34px 32px 42px; }
+.app-shell:has(.student-payment) { background: var(--paper); }
+.student-payment, .py-checkout {
+  --py-surface: #fffcf6;
+  --py-line: #e5dfd3;
+  --py-muted: #797367;
+  --py-accent: #9e4937;
+  --py-green: var(--ok);
+  min-width: 0;
+  color: var(--ink);
+}
+.student-payment h1, .student-payment h2, .student-payment h3, .student-payment p, .py-checkout h2, .py-checkout p { margin: 0; }
+.student-payment svg, .py-checkout svg { flex-shrink: 0; }
+.student-payment button, .py-checkout button { font-family: var(--font-body); cursor: pointer; }
+.student-payment button:disabled, .py-checkout button:disabled { cursor: wait; opacity: .65; }
+.student-payment :is(a, button, input):focus-visible, .py-checkout :is(a, button):focus-visible { outline: 3px solid var(--blue-ink); outline-offset: 4px; }
+.py-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
+.py-eyebrow { font: 500 10px/1.6 var(--font-body); letter-spacing: .1em; color: var(--py-muted); }
+.py-heading .py-eyebrow { display: flex; align-items: center; gap: 8px; }
+.py-heading .py-eyebrow > span { width: 6px; height: 6px; border-radius: 50%; background: var(--py-accent); }
+.py-heading h1 { font-size: clamp(30px, 3.8vw, 44px); letter-spacing: -.035em; line-height: 1.3; margin: 8px 0; }
+.py-heading h1 em { font-style: normal; color: var(--py-accent); }
+.py-subtitle { color: var(--py-muted); font-size: 12px; }
+.py-heading-mark { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; border: 1px solid var(--py-line); color: var(--py-accent); flex-shrink: 0; }
+.py-active-plan { display: flex; align-items: center; gap: 14px; margin-bottom: 23px; padding: 18px 22px; background: linear-gradient(110deg, rgba(46, 139, 87, .06), rgba(46, 139, 87, .01)); border: 1px solid rgba(46, 139, 87, .35); border-radius: 12px; }
+.py-active-icon { display: grid; place-items: center; width: 34px; height: 34px; color: var(--py-green); background: rgba(46, 139, 87, .08); border-radius: 50%; flex-shrink: 0; }
+.py-active-plan > div { min-width: 0; flex: 1; }
+.py-active-plan strong { display: block; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.py-active-plan p { color: var(--py-muted); font-size: 10px; margin-top: 3px; }
+.py-active-plan a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--py-green); font-size: 11px; text-decoration: none; flex-shrink: 0; }
+.py-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+.py-main, .py-aside { display: grid; gap: 22px; min-width: 0; }
+.py-panel { padding: 25px; background: var(--py-surface); border: 1px solid var(--py-line); border-radius: 15px; min-width: 0; }
+.py-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 24px; }
+.py-section-heading h2 { font: 600 20px/1.4 var(--font-head); margin-top: 6px; }
+.py-small-mark, .py-history-mark { display: inline-flex; color: var(--py-muted); }
+.py-plan-options { min-width: 0; border: 0; padding: 0; margin: 0 0 25px; display: grid; gap: 9px; }
+.py-plan-options legend { font-size: 11px; color: var(--py-muted); padding: 0 0 10px; }
+.py-plan-option { display: flex; align-items: center; gap: 10px; margin: 0; padding: 13px; border: 1px solid var(--py-line); border-radius: 10px; cursor: pointer; min-width: 0; }
+.py-plan-option.is-selected { border-color: rgba(46, 139, 87, .5); background: rgba(46, 139, 87, .04); }
+.py-plan-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--py-green); flex-shrink: 0; }
+.py-plan-option > span { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.py-plan-option strong { font-size: 11px; font-weight: 500; overflow-wrap: anywhere; }
+.py-plan-option > span > span { font-size: 10px; color: var(--py-muted); }
+.py-plan-option b { font: 500 12px var(--font-mono); flex-shrink: 0; }
+.py-plan-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-bottom: 15px; }
+.py-plan-tags > span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 6px; background: var(--paper); border: 1px solid var(--py-line); color: var(--ink-soft); font-size: 10px; }
+.py-plan-tags .is-owned { color: var(--py-green); background: rgba(46, 139, 87, .06); border-color: rgba(46, 139, 87, .25); }
+.py-plan-detail h3 { font: 600 25px/1.45 var(--font-head); letter-spacing: -.03em; overflow-wrap: anywhere; }
+.student-payment .py-plan-description { color: var(--py-muted); font-size: 12px; line-height: 1.85; margin-top: 9px; overflow-wrap: anywhere; }
+.py-plan-price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px; margin: 23px 0; }
+.py-plan-price strong { font: 500 clamp(28px, 3vw, 38px)/1.2 var(--font-mono); letter-spacing: -.055em; }
+.py-plan-price > span { font-size: 11px; color: var(--py-muted); }
+.py-benefits { list-style: none; padding: 22px 0 0; margin: 0; border-top: 1px solid var(--py-line); display: grid; gap: 21px; }
+.py-benefits li { display: flex; align-items: center; gap: 12px; }
+.py-benefits li > span { display: grid; place-items: center; width: 38px; height: 40px; border: 1px solid var(--py-line); border-radius: 10px; color: var(--py-green); flex-shrink: 0; }
+.py-benefits li > div { min-width: 0; }
+.py-benefits strong { font-size: 12px; font-weight: 500; }
+.py-benefits p { font-size: 10px; color: var(--py-muted); margin-top: 3px; line-height: 1.7; }
+.py-summary { background: linear-gradient(135deg, rgba(46, 139, 87, .06), rgba(46, 139, 87, .01) 90%); border-color: rgba(46, 139, 87, .35); }
+.py-summary-top { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.py-icon-box { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid rgba(46, 139, 87, .3); color: var(--py-green); background: rgba(46, 139, 87, .03); border-radius: 10px; }
+.py-summary h2 { font-size: 22px; line-height: 1.4; }
+.student-payment .py-summary-plan { margin-top: 8px; color: var(--py-muted); font-size: 11px; overflow-wrap: anywhere; }
+.py-summary dl { display: grid; gap: 13px; margin: 25px 0 20px; }
+.py-summary dl > div { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; }
+.py-summary dt { color: var(--py-muted); }
+.py-summary dd { margin: 0; text-align: right; font-weight: 500; }
+.py-owned-label { color: var(--py-green); }
+.py-summary-total { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding-top: 20px; margin: 0 0 21px; border-top: 1px solid var(--py-line); }
+.py-summary-total > span { font-size: 11px; color: var(--ink-soft); }
+.py-summary-total strong { font: 500 28px/1.3 var(--font-mono); letter-spacing: -.055em; }
+.py-primary { display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 13px 17px; border: 0; border-radius: 14px; font-size: 12px; font-weight: 600; text-decoration: none; color: #fffdf7; background: var(--py-green); line-height: 1.5; }
+.py-primary:hover { color: #fffdf7; background: color-mix(in srgb, var(--py-green) 88%, #211d17); }
+.student-payment .py-summary-expiry { font-size: 11px; line-height: 1.8; color: var(--py-muted); border-top: 1px solid var(--py-line); padding-top: 18px; margin: 0 0 20px; }
+.py-methods { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.py-methods > span { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-soft); }
+.py-methods > span + span { border-left: 1px solid var(--py-line); padding-left: 12px; }
+.student-payment .py-summary-note { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 9px; color: var(--py-muted); margin-top: 12px; }
+.py-guide h2 { font: 600 14px/1.5 var(--font-body); }
+.py-guide ol { list-style: none; margin: 22px 0; padding: 0; display: grid; gap: 21px; }
+.py-guide li { display: flex; gap: 11px; align-items: flex-start; }
+.py-guide li > span { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--py-line); border-radius: 50%; color: var(--py-muted); font: 400 10px var(--font-mono); flex-shrink: 0; }
+.py-guide li > div { min-width: 0; }
+.py-guide li strong { font-size: 11px; font-weight: 500; }
+.py-guide li p { font-size: 10px; color: var(--py-muted); line-height: 1.7; margin-top: 3px; }
+.py-support { display: flex; align-items: flex-start; gap: 9px; padding-top: 19px; border-top: 1px solid var(--py-line); color: var(--py-muted); }
+.py-support > div { min-width: 0; }
+.py-support strong { display: block; color: var(--ink-soft); font-size: 10px; font-weight: 500; line-height: 1.7; }
+.py-support a { display: inline-flex; align-items: center; min-height: 36px; font: 400 12px var(--font-mono); color: var(--py-green); text-decoration: none; }
+.py-history .py-section-heading { margin-bottom: 18px; }
+.py-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+.py-filters button { min-height: 36px; padding: 7px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--py-muted); font-size: 10px; }
+.py-filters button[aria-pressed="true"] { background: var(--paper); border-color: var(--py-line); color: var(--ink); }
+.py-transactions { margin: 0; padding: 0; list-style: none; }
+.py-transaction { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 17px 0; border-top: 1px solid var(--py-line); }
+.py-transaction:last-child { padding-bottom: 0; }
+.py-transaction-icon { display: grid; place-items: center; width: 31px; height: 35px; color: var(--py-muted); border: 1px solid var(--py-line); border-radius: 8px; }
+.py-transaction-icon.is-paid { background: rgba(46, 139, 87, .05); color: var(--py-green); }
+.py-transaction-info { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.py-transaction-info strong { font-size: 11px; line-height: 1.6; font-weight: 500; overflow-wrap: anywhere; }
+.py-transaction-info > span { color: var(--py-muted); font-size: 9px; }
+.py-transaction-amount { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.py-transaction-amount strong { font: 500 12px var(--font-mono); }
+.py-status { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; white-space: nowrap; }
+.py-status::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.py-status.is-paid { color: var(--py-green); }
+.py-status.is-pending { color: var(--warn); }
+.py-status.is-failed { color: var(--py-accent); }
+.py-check-transaction { grid-column: 2 / -1; justify-self: end; min-height: 36px; padding: 6px 12px; border: 1px solid var(--py-line); border-radius: 7px; color: var(--ink-soft); background: transparent; font-size: 10px; }
+.py-text-button { display: inline-flex; align-items: center; gap: 9px; min-height: 40px; padding: 8px 0; border: 0; background: none; color: var(--py-accent); font-size: 11px; font-weight: 500; }
+.py-show-more { width: 100%; justify-content: space-between; margin-top: 13px; border-top: 1px solid var(--py-line); padding-top: 16px; }
+.py-empty { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 13px; min-height: 180px; text-align: center; padding: 20px 10px; color: var(--py-muted); }
+.py-empty-icon { color: var(--py-accent); }
+.py-empty p { font-size: 12px; line-height: 1.8; max-width: 310px; }
+.py-verification { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; border: 1px solid var(--py-line); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; background: var(--py-surface); }
+.py-verification > p { flex: 1 1 180px; font-size: 12px; line-height: 1.8; }
+.py-verification.is-success { color: var(--py-green); border-color: rgba(46, 139, 87, .35); background: rgba(46, 139, 87, .06); }
+.py-verification.is-error { color: var(--py-accent); }
+.py-verification.is-checking, .py-verification.is-pending { color: var(--ink-soft); }
+.py-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-top: 1px solid var(--py-line); margin-top: 30px; padding-top: 22px; }
+.py-footer > span { font: 600 12px var(--font-head); color: var(--ink-soft); }
+.py-footer > span > span { color: var(--py-accent); }
+.py-footer a { font-size: 10px; color: var(--py-muted); text-decoration: none; }
+.py-checkout { width: min(480px, calc(100% - 32px)); max-width: none; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--py-line); border-radius: 22px; background: var(--py-surface); color: var(--ink); box-shadow: 0 24px 80px #211d1733; overflow-y: auto; }
+.py-checkout::backdrop { background: rgba(23, 21, 17, .45); backdrop-filter: blur(5px); }
+.py-checkout-inner { padding: 27px; }
+.py-dialog-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 19px; }
+.py-dialog-top .py-icon-box { width: 44px; height: 44px; }
+.py-close { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--py-line); border-radius: 50%; color: var(--py-muted); background: none; }
+.py-checkout h2 { font: 600 27px/1.4 var(--font-head); margin: 7px 0 8px; }
+#py-checkout-description { font-size: 12px; color: var(--py-muted); line-height: 1.8; }
+.py-order { padding: 19px; margin-top: 22px; background: linear-gradient(135deg, rgba(46, 139, 87, .06), rgba(46, 139, 87, .01)); border: 1px solid rgba(46, 139, 87, .3); border-radius: 13px; }
+.py-order > strong { display: block; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.py-order dl { display: grid; gap: 13px; margin: 17px 0 0; }
+.py-order dl > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 9px; }
+.py-order dt { font-size: 11px; color: var(--py-muted); }
+.py-order dd { margin: 0; font-size: 12px; font-weight: 500; }
+.py-order-total { border-top: 1px solid var(--py-line); margin-top: 3px; padding-top: 16px; }
+.py-order-total dd { font: 500 25px var(--font-mono); letter-spacing: -.05em; }
+.py-checkout .py-dialog-note { font-size: 11px; color: var(--py-muted); line-height: 1.8; margin: 14px 0 22px; text-align: center; }
+.py-checkout .py-checkout-error { border-radius: 8px; border: 1px solid color-mix(in srgb, var(--py-accent) 35%, transparent); padding: 12px; margin-bottom: 17px; font-size: 12px; line-height: 1.7; color: var(--py-accent); }
+.py-cancel { width: 100%; min-height: 44px; margin-top: 7px; border: 0; background: none; color: var(--py-muted); font-size: 12px; }
+[data-theme="dark"] :is(.student-payment, .py-checkout) { --py-surface: #24211c; --py-line: #3d3830; --py-muted: #b5ad9d; --py-accent: #e3957e; }
+[data-theme="dark"] :is(.student-payment, .py-checkout) .py-primary { color: #211d17; }
+@media (max-width: 1100px) {
+  .content.payment-content { padding: 28px 22px 40px; }
+  .py-layout { display: flex; flex-direction: column; gap: 18px; }
+  .py-main, .py-aside { display: contents; }
+  .py-layout .py-panel { width: 100%; }
+  .py-plans { order: 0; }
+  .py-summary { order: 1; }
+  .py-history { order: 2; }
+  .py-guide { order: 3; }
+}
+@media (max-width: 767px) {
+  .content.payment-content { padding: 24px 16px 28px; }
+  .py-heading { gap: 10px; margin-bottom: 22px; }
+  .py-heading h1 { font-size: 32px; }
+  .py-heading .py-eyebrow { font-size: 8px; letter-spacing: .06em; }
+  .py-subtitle { font-size: 11px; line-height: 1.8; }
+  .py-heading-mark { width: 42px; height: 42px; }
+  .py-heading-mark svg { width: 21px; height: 21px; }
+  .py-active-plan { padding: 16px; gap: 10px; flex-wrap: wrap; }
+  .py-active-plan > div { flex-basis: calc(100% - 46px); }
+  .py-active-plan a { margin-left: 44px; }
+  .py-panel { padding: 22px 20px; }
+  .py-section-heading h2 { font-size: 19px; }
+  .py-section-heading .py-eyebrow { font-size: 8px; }
+  .py-plan-detail h3 { font-size: 24px; }
+  .py-plan-price strong { font-size: 34px; }
+  .py-benefits p { font-size: 11px; }
+  .py-plan-option { padding: 12px 10px; }
+  .py-plan-option b { font-size: 11px; }
+  .py-primary { min-height: 49px; }
+  .py-summary-note { line-height: 1.7; }
+  .py-guide h2 { font-size: 15px; }
+  .py-guide li strong { font-size: 12px; }
+  .py-guide li p { font-size: 11px; }
+  .py-filters { gap: 3px; }
+  .py-filters button { min-height: 44px; padding: 8px 10px; }
+  .py-check-transaction { min-height: 44px; }
+  .py-checkout-inner { padding: 22px; }
+  .py-checkout h2 { font-size: 25px; }
+  .py-footer { margin-top: 24px; }
+}
+@media (max-width: 360px) {
+  .py-heading-mark { display: none; }
+  .py-panel { padding: 20px 16px; }
+  .py-small-mark { display: none; }
+  .py-plan-option { flex-wrap: wrap; }
+  .py-plan-option > span { flex-basis: calc(100% - 27px); }
+  .py-plan-option > b { margin-left: 26px; }
+  .py-transaction { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .py-transaction-icon { display: none; }
+  .py-check-transaction { grid-column: 1 / -1; }
+  .py-checkout-inner { padding: 20px 17px; }
+  .py-checkout .py-eyebrow { font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .student-payment *, .py-checkout * { animation: none !important; transition: none !important; }
+}

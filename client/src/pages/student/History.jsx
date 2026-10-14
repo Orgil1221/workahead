@@ -1,42 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../../api/client.js';
-import Spinner from '../../components/Spinner.jsx';
+import { useStudy, useStudyLoad } from './StudyContext.jsx';
+import { StudyHeading, StudyIcon, StudyState } from './StudyUI.jsx';
 
 export default function History() {
-  const [attempts, setAttempts] = useState(null);
-
-  useEffect(() => {
-    api('/attempts/history/list').then((d) => setAttempts(d.attempts)).catch(() => {});
-  }, []);
-
-  if (!attempts) return <Spinner />;
-
-  return (
-    <>
-      <div className="page-title-row"><h1>Дүнгийн түүх</h1></div>
-      <div className="card" style={{ padding: '4px 16px' }}>
-        {attempts.length === 0 ? (
-          <div className="empty-state">Дуусгасан тест байхгүй.</div>
-        ) : attempts.map((a) => {
-          const pct = a.totalPoints ? Math.round((a.score / a.totalPoints) * 100) : 0;
-          return (
-            <Link key={a.id} to={`/student/attempt/${a.id}`} className="row-link">
-              <span style={{ minWidth: 0 }}>
-                <strong style={{ display: 'block', fontWeight: 500 }}>{a.exam.title}</strong>
-                <span className="small muted mono">
-                  {new Date(a.finishedAt).toLocaleDateString('mn-MN')} · {a.mode === 'TIMED' ? 'цагтай' : 'дадлага'}
-                  {' '}· {a.score}/{a.totalPoints} оноо
-                </span>
-              </span>
-              <span className="badge mono" style={{ borderColor: pct >= 60 ? 'var(--ok)' : 'var(--accent)', color: pct >= 60 ? 'var(--ok)' : 'var(--accent)' }}>
-                {pct}%
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-      <Link to="/student/dashboard" className="btn secondary small">График харах →</Link>
-    </>
-  );
+  const { request, base } = useStudy();
+  const { data, loading, error, retry } = useStudyLoad(() => request('/attempts/history/list'), [request]);
+  const [filter, setFilter] = useState('all');
+  const attempts = data?.attempts || [];
+  const filtered = attempts.filter((attempt) => filter === 'all' || attempt.mode === filter);
+  return <div className="sl-page">
+    <StudyHeading eyebrow="МИНИЙ СУРАЛЦАХ ЯВЦ" title="Дүнгийн түүх" description="Ажилласан шалгалт, хариулт, бодолтын тайлбараа дахин хараарай." />
+    {loading || error ? <StudyState loading={loading} error={error} retry={retry} /> : <>
+      <div className="sl-section-title"><span>{filtered.length} оролдлого</span><div className="sl-filter" aria-label="Шалгалтын горим">{[['all', 'Бүгд'], ['TEST', 'Тест'], ['TIMED', 'Задгай']].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div></div>
+      <div className="sl-exam-list">{filtered.map((attempt) => {
+        const percent = attempt.totalPoints ? Math.round(attempt.score / attempt.totalPoints * 100) : 0;
+        return <Link key={attempt.id} className="sl-card sl-exam" to={base + '/attempt/' + attempt.id}><div className="sl-exam-info"><h3>{attempt.exam.title}</h3><div className="sl-exam-meta"><span>{new Intl.DateTimeFormat('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(attempt.finishedAt))}</span><span className="sl-chip">{attempt.mode === 'TEST' ? 'Тест' : 'Задгай'}</span></div></div><div className="sl-history-score"><strong>{percent}%</strong><small>{attempt.score}/{attempt.totalPoints} оноо</small></div><StudyIcon name="arrow" size={16} /></Link>;
+      })}</div>
+      {!filtered.length && <StudyState title="Шалгалтын дүн алга" description={filter === 'all' ? 'Эхний шалгалтаа ажиллахад таны дүн энд хадгалагдана.' : 'Энэ горимоор ажилласан шалгалт байхгүй байна.'}><Link className="sl-button sl-button-green" to={base}>Хичээл сонгох<StudyIcon name="arrow" size={16} /></Link></StudyState>}
+    </>}
+  </div>;
 }

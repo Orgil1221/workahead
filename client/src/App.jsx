@@ -35,6 +35,9 @@ import Payment from './pages/student/Payment.jsx';
 import Terms from './pages/Terms.jsx';
 
 const DashboardPreview = import.meta.env.DEV ? lazy(() => import('./pages/student/DashboardPreview.jsx')) : null;
+const ProfilePreview = import.meta.env.DEV ? lazy(() => import('./pages/student/ProfilePreview.jsx')) : null;
+const PaymentPreview = import.meta.env.DEV ? lazy(() => import('./pages/student/PaymentPreview.jsx')) : null;
+const StudyPreview = import.meta.env.DEV ? lazy(() => import('./pages/student/StudyPreview.jsx')) : null;
 
 function Guard({ children, admin }) {
   const { user } = useAuth();
@@ -138,12 +141,15 @@ function Footer() {
 
 export default function App() {
   const { pathname } = useLocation();
-  const isDashboardPreview = import.meta.env.DEV && pathname === '/preview/dashboard';
+  const isLocalPreview = import.meta.env.DEV && (['/preview/dashboard', '/preview/profile', '/preview/payment'].includes(pathname) || pathname === '/preview/study' || pathname.startsWith('/preview/study/'));
   return (
     <>
-      {!isDashboardPreview && <WarmupBanner />}
+      {!isLocalPreview && <WarmupBanner />}
       <Routes>
+        {StudyPreview && <Route path="/preview/study/*" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><StudyPreview /></Suspense>} />}
         {DashboardPreview && <Route path="/preview/dashboard" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><DashboardPreview /></Suspense>} />}
+        {ProfilePreview && <Route path="/preview/profile" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><ProfilePreview /></Suspense>} />}
+        {PaymentPreview && <Route path="/preview/payment" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><PaymentPreview /></Suspense>} />}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

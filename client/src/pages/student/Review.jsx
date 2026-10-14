@@ -1,76 +1,29 @@
-﻿import { useEffect, useState } from 'react';
-import { api } from '../../api/client.js';
-import Spinner from '../../components/Spinner.jsx';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import MathText from '../../components/MathText.jsx';
+import { useStudy, useStudyLoad } from './StudyContext.jsx';
+import { StudyHeading, StudyState } from './StudyUI.jsx';
 
 export default function Review() {
-  const [questions, setQuestions] = useState(null);
-  const [openId, setOpenId] = useState(null);
+  const { request, base } = useStudy();
+  const { data, loading, error, retry } = useStudyLoad(() => request('/attempts/practice/wrong'), [request]);
   const [solutions, setSolutions] = useState({});
-
-  useEffect(() => {
-    api('/attempts/practice/wrong').then((d) => setQuestions(d.questions)).catch(() => setQuestions([]));
-  }, []);
-
-  async function reveal(qid) {
-    setOpenId(openId === qid ? null : qid);
-    if (!solutions[qid]) {
-      try {
-        const d = await api(`/exams/solution/${qid}`);
-        setSolutions((s) => ({ ...s, [qid]: d }));
-      } catch {}
+  const [opened, setOpened] = useState({});
+  async function reveal(questionId) {
+    if (opened[questionId] && !solutions[questionId]?.error) {
+      setOpened((current) => ({ ...current, [questionId]: false }));
+      return;
     }
+    setOpened((current) => ({ ...current, [questionId]: true }));
+    if (solutions[questionId] && !solutions[questionId].error) return;
+    setSolutions((current) => ({ ...current, [questionId]: { loading: true } }));
+    try {
+      const result = await request('/exams/solution/' + questionId);
+      setSolutions((current) => ({ ...current, [questionId]: result }));
+    } catch { setSolutions((current) => ({ ...current, [questionId]: { error: true } })); }
   }
-
-  if (!questions) return <Spinner />;
-
-  return (
-    <>
-      <div className="page-title-row">
-        <h1>Давталт — буруу бодсон асуултууд</h1>
-      </div>
-      {questions.length === 0 ? (
-        <div className="card"><div className="empty-state">
-          Буруу бодсон асуулт байхгүй байна. Амжилт хүсье!
-        </div></div>
-      ) : (
-        <>
-          <p className="small muted" style={{ marginTop: -6 }}>
-            Таны өмнөх тестүүдэд буруу бодсон {questions.length} асуулт. Шийдлийг хараад дахин бодоорой.
-          </p>
-          {questions.map((q, i) => {
-            const open = openId === q.id;
-            return (
-              <div className="card question-card" key={q.id}>
-                <span className="question-points mono">{q.points} оноо</span>
-                <span className="question-num mono">№{i + 1}</span>
-                {q.topic && <span className="badge blue" style={{ marginLeft: 4 }}>{q.topic}</span>}
-                <div className="q-prompt" style={{ margin: '8px 0' }}><MathText text={q.prompt} /></div>
-                <span className="faint small mono">{q.exam?.title}</span>
-                <div className="btn-row" style={{ marginTop: 10 }}>
-                  <button className="btn secondary small" onClick={() => reveal(q.id)}>
-                    {open ? 'Хаах' : 'Шийдэл харах'}
-                  </button>
-                </div>
-                {open && solutions[q.id] && (
-                  <>
-                    {solutions[q.id].modelSolution && (
-                      <div className="solution-block">
-                        <strong className="small">Иж бүрэн шийдэл</strong>
-                        <div><MathText text={solutions[q.id].modelSolution} /></div>
-                      </div>
-                    )}
-                    <div className="answer-block">
-                      <strong className="small" style={{ fontFamily: 'var(--font-body)' }}>Хариулт: </strong>
-                      <MathText text={solutions[q.id].answer} />
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </>
-      )}
-    </>
-  );
+  return <div className="sl-page">
+    <StudyHeading back={{ to: base, label: 'Хичээлүүд' }} eyebrow="ДАВТЛАГА" title="Алдсан бодлогууд" description="Эхлээд өөрөө бодоод, дараа нь зөв хариу болон тайлбартай харьцуулаарай." />
+    {loading || error ? <StudyState loading={loading} error={error} retry={retry} /> : !data.questions.length ? <StudyState title="Давтах бодлого алга" description="Шалгалтаар алдсан бодлогууд энд цугларна."><Link className="sl-button sl-button-green" to={base}>Шалгалт сонгох</Link></StudyState> : <><div className="sl-section-title"><span>{data.questions.length} бодлого</span></div><div className="sl-result-list">{data.questions.map((question, index) => <section className="sl-card sl-panel" key={question.id}><div className="sl-row"><span className="sl-code">{String(index + 1).padStart(2, '0')} / {question.topic || 'БОДЛОГО'}</span><span className="sl-chip">{question.points} оноо</span></div><div className="sl-math sl-question-prompt"><MathText text={question.prompt} /></div><p className="sl-note">{question.exam?.title}</p><button className="sl-button" aria-expanded={!!opened[question.id]} aria-controls={'solution-' + question.id} disabled={solutions[question.id]?.loading} onClick={() => reveal(question.id)}>{solutions[question.id]?.loading ? 'Ачаалж байна…' : solutions[question.id]?.error ? 'Дахин ачаалах' : opened[question.id] ? 'Тайлбарыг хураах' : 'Хариу, тайлбар харах'}</button>{opened[question.id] && <div id={'solution-' + question.id} className="sl-answer-detail">{solutions[question.id]?.error ? <p className="sl-error" role="alert">Бодолт ачаалж чадсангүй. Дахин оролдоно уу.</p> : solutions[question.id]?.loading ? <p role="status" className="sl-note">Бодолт ачаалж байна…</p> : <div className="sl-solution"><div className="sl-math"><MathText text={solutions[question.id]?.answer || solutions[question.id]?.correctChoice || ''} /></div><div className="sl-math"><MathText text={solutions[question.id]?.modelSolution || 'Бодолтын тайлбар хараахан нэмэгдээгүй.'} /></div></div>}</div>}</section>)}</div></>}
+  </div>;
 }

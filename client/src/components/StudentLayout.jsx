@@ -71,7 +71,7 @@ export default function StudentLayout() {
           hasUnreadNotifications={unread > 0}
           onBellClick={() => navigate('/student/notifications')}
         />
-        <main className={pathname === '/student/dashboard' ? 'content dashboard-content' : 'content'}>
+        <main className={`content${pathname === '/student/dashboard' ? ' dashboard-content' : pathname === '/student/profile' ? ' profile-content' : pathname === '/student/payment' ? ' payment-content' : /^\/student\/(?:(?:u|p|exam|attempt)\/|(?:review|history)$)/.test(pathname) ? ' study-content' : ''}`}>
           <div className="page-enter" key={location.pathname}>
             <Outlet />
           </div>
