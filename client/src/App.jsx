@@ -141,11 +141,12 @@ function Footer() {
 
 export default function App() {
   const { pathname } = useLocation();
-  const isLocalPreview = import.meta.env.DEV && (['/preview/dashboard', '/preview/profile', '/preview/payment'].includes(pathname) || pathname === '/preview/study' || pathname.startsWith('/preview/study/'));
+  const isLocalPreview = import.meta.env.DEV && (['/preview/landing', '/preview/dashboard', '/preview/profile', '/preview/payment'].includes(pathname) || pathname === '/preview/study' || pathname.startsWith('/preview/study/'));
   return (
     <>
       {!isLocalPreview && <WarmupBanner />}
       <Routes>
+        {import.meta.env.DEV && <Route path="/preview/landing" element={<Landing preview />} />}
         {StudyPreview && <Route path="/preview/study/*" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><StudyPreview /></Suspense>} />}
         {DashboardPreview && <Route path="/preview/dashboard" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><DashboardPreview /></Suspense>} />}
         {ProfilePreview && <Route path="/preview/profile" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><ProfilePreview /></Suspense>} />}
