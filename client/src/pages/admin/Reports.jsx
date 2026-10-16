@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../../api/client.js';
+import { useAdminApi } from './AdminContext.jsx';
+import { AdminDialog, AdminHeading } from './AdminUI.jsx';
 import Spinner from '../../components/Spinner.jsx';
 import MathText from '../../components/MathText.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
 export default function AdminReports() {
+  const api = useAdminApi();
   const [status, setStatus] = useState('NEW');
   const [flags, setFlags] = useState(null);
   const [editingQuestion, setEditingQuestion] = useState(null);
@@ -44,12 +46,12 @@ export default function AdminReports() {
 
   return (
     <>
-      <div className="page-title-row"><h1>Reports queue</h1></div>
+      <AdminHeading eyebrow="КОНТЕНТЫН ХЯНАЛТ" title="Алдааны мэдээлэл" description="Оюутнуудаас ирсэн мэдээллийг шалгаж, асуултыг засаж шийдвэрлэнэ." />
 
       <div className="filter-bar">
         {[['NEW', 'Шинэ'], ['RESOLVED', 'Шийдвэрлэсэн'], ['ALL', 'Бүгд']].map(([v, label]) => (
           <button key={v} className={`btn small ${status === v ? '' : 'secondary'}`}
-            onClick={() => { setStatus(v); load(v); }}>{label}</button>
+            aria-pressed={status === v} onClick={() => { setStatus(v); load(v); }}>{label}</button>
         ))}
       </div>
 
@@ -92,6 +94,7 @@ export default function AdminReports() {
 }
 
 function FlagFixModal({ data, onClose, onSaved }) {
+  const api = useAdminApi();
   const [form, setForm] = useState(data);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -113,15 +116,13 @@ function FlagFixModal({ data, onClose, onSaved }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Асуулт засах</h3>
-        <label>Асуултын текст</label>
-        <textarea rows={4} value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })} />
-        <label>Иж бүрэн шийдэл</label>
-        <textarea rows={5} value={form.modelSolution} onChange={(e) => setForm({ ...form, modelSolution: e.target.value })} />
-        <label>Хариулт</label>
-        <input value={form.answer} onChange={(e) => setForm({ ...form, answer: e.target.value })} />
+    <AdminDialog title={<>Асуулт засах</>} onClose={onClose} busy={busy}>
+        <label htmlFor="admin-reports-field-1">Асуултын текст</label>
+        <textarea id="admin-reports-field-1" rows={4} value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })} />
+        <label htmlFor="admin-reports-field-2">Иж бүрэн шийдэл</label>
+        <textarea id="admin-reports-field-2" rows={5} value={form.modelSolution} onChange={(e) => setForm({ ...form, modelSolution: e.target.value })} />
+        <label htmlFor="admin-reports-field-3">Хариулт</label>
+        <input id="admin-reports-field-3" value={form.answer} onChange={(e) => setForm({ ...form, answer: e.target.value })} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <input type="checkbox" style={{ width: 'auto' }} checked={form.resolveFlags}
             onChange={(e) => setForm({ ...form, resolveFlags: e.target.checked })} />
@@ -131,7 +132,6 @@ function FlagFixModal({ data, onClose, onSaved }) {
           <button className="btn secondary" onClick={onClose}>Цуцлах</button>
           <button className="btn" disabled={busy} onClick={save}>{busy ? '…' : 'Хадгалах'}</button>
         </div>
-      </div>
-    </div>
+    </AdminDialog>
   );
 }

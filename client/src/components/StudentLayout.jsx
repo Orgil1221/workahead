@@ -5,6 +5,7 @@ import { api } from '../api/client.js';
 import TabBar from './TabBar.jsx';
 import MobileHeader from './MobileHeader.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
+import { useUsageTracking } from '../analytics/useUsageTracking.js';
 
 const tabs = [
   { to: '/student', label: 'Нүүр', icon: 'home', end: true },
@@ -21,6 +22,7 @@ export default function StudentLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [unread, setUnread] = useState(0);
+  useUsageTracking(user?.id, user?.role === 'STUDENT' && (pathname === '/student' || pathname.startsWith('/student/')));
 
   useEffect(() => {
     let alive = true;

@@ -14,6 +14,8 @@ import flagRoutes from './routes/flags.js';
 import notificationRoutes from './routes/notifications.js';
 import paymentRoutes from './routes/payments.js';
 import pushRoutes from './routes/push.js';
+import usageRoutes from './routes/usage.js';
+import adminUsageRoutes from './routes/admin/usage.js';
 import adminCatalogRoutes from './routes/admin/catalog.js';
 import adminStatsRoutes from './routes/admin/stats.js';
 import adminUserRoutes from './routes/admin/users.js';
@@ -82,6 +84,8 @@ app.use('/api/flags', flagRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/usage', usageRoutes);
+app.use('/api/admin/usage', adminUsageRoutes);
 app.use('/api/admin/catalog', adminCatalogRoutes);
 app.use('/api/admin/stats', adminStatsRoutes);
 app.use('/api/admin/users', adminUserRoutes);
@@ -98,6 +102,11 @@ app.use((err, _req, res, _next) => {
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Work Ahead API → http://localhost:${port}`);
+  Promise.all([import('./services/usage.js'), import('./db.js')]).then(([usage, database]) => {
+    const cleanup = () => usage.pruneUsage(database.default).catch((error) => console.error('Usage retention:', error.message));
+    setTimeout(cleanup, 30000);
+    setInterval(cleanup, 24 * 60 * 60 * 1000);
+  }).catch((error) => console.error('Usage retention:', error.message));
   // Expire stale PENDING every 5 min — prevents DoS via PENDING flood (C3)
   import('./jobs/expirePending.js').then(({ expireStalePending }) => {
     const ttl = Number(process.env.PENDING_TTL_MINUTES || 15);

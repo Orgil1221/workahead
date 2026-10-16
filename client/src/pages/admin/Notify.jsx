@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client.js';
+import { useAdminApi, useAdmin } from './AdminContext.jsx';
+import { AdminHeading } from './AdminUI.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import Spinner from '../../components/Spinner.jsx';
 import { enablePush, sendTestPush } from '../../push.js';
 
 export default function AdminNotify() {
+  const api = useAdminApi();
+  const { preview } = useAdmin();
   const [programs, setPrograms] = useState([]);
   const [form, setForm] = useState({ title: '', body: '', programId: '' });
   const [busy, setBusy] = useState(false);
@@ -16,6 +19,7 @@ export default function AdminNotify() {
 
   // Өөрийн утсан дээр push турших (хэрэглэгчдэд илгээхээс өмнө)
   const sendSelfTest = async () => {
+    if (preview) return toast('Жишээ орчин — бодит push мэдэгдэл илгээхгүй.');
     setTestBusy(true);
     try {
       try { await enablePush(); } catch (e) {
@@ -79,7 +83,7 @@ export default function AdminNotify() {
 
   return (
     <>
-      <div className="page-title-row"><h1>Мэдэгдэл илгээх</h1></div>
+      <AdminHeading eyebrow="ОЮУТАНТАЙ ХОЛБОГДОХ" title="Мэдэгдэл" description="Зарлал илгээж, өмнөх мэдэгдлүүдээ удирдаарай." />
       <div className="card" style={{ marginBottom: 14 }}>
         <h3 style={{ margin: '0 0 6px' }}>Push турших (өөртөө)</h3>
         <p className="small muted" style={{ margin: '0 0 10px' }}>

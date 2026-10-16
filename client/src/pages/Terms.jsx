@@ -2,7 +2,7 @@ export default function Terms() {
   return (
     <div className="content" style={{ maxWidth: 760, margin: '0 auto', padding: '24px 16px 40px' }}>
       <h1>Үйлчилгээний нөхцөл</h1>
-      <p className="small muted">Сүүлд шинэчилсэн: 2026-09-26 • WorkAhead • www.workahead.me</p>
+      <p className="small muted">Сүүлд шинэчилсэн: 2026-10-16 • WorkAhead • www.workahead.me</p>
 
       <div className="card" style={{ marginTop: 16 }}>
         <h3>1. Бидний тухай</h3>
@@ -42,6 +42,11 @@ export default function Terms() {
         </p>
       </div>
 
+      <div className="card">
+        <h3>5. Ашиглалтын хугацааны хэмжилт</h3>
+        <p className="small" style={{ lineHeight: 1.7 }}>Үйлчилгээний ачаалал, ашиглалтыг ойлгохын тулд нэвтэрсэн оюутны идэвхтэй хугацааг бүртгэлтэй нь холбон хэмжинэ. Харагдаж буй, фокустай tab дээрх хугацааг тоолж, 2 минут үйлдэлгүй бол түр зогсооно. Давхар tab, төхөөрөмжийн давхцсан хугацааг нэг удаа тоолно.</p>
+        <p className="small" style={{ lineHeight: 1.7 }}>Энэ хэмжилтэд бичсэн текст, товчлуурын утга, дэлгэцийн зураг, хуудасны агуулгыг хадгалахгүй. Админд өдөр, цагийн нэгтгэл харагдана. Хугацааны дэлгэрэнгүй бүртгэлийг 35 хоног хадгалж, өдөр тутмын цэвэрлэгээгээр устгана. Өмнөх ашиглалтыг таамгаар нөхөхгүй.</p>
+      </div>
       <p className="small faint" style={{ textAlign: 'center', marginTop: 18 }}>© 2026 WorkAhead • Бүх эрх хуулиар хамгаалагдсан</p>
     </div>
   );

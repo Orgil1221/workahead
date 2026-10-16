@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { api } from '../../api/client.js';
+import { useAdminApi, AdminLink as Link } from './AdminContext.jsx';
+import { AdminDialog, AdminHeading, AdminIcon } from './AdminUI.jsx';
 import Spinner from '../../components/Spinner.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
 export default function AdminCatalog() {
+  const api = useAdminApi();
   const [universities, setUniversities] = useState(null);
   const [exams, setExams] = useState([]);
   const [programFilter, setProgramFilter] = useState('');
@@ -24,9 +25,7 @@ export default function AdminCatalog() {
 
   return (
     <>
-      <div className="page-title-row">
-        <h1>Сургууль / Хөтөлбөр / Шалгалт</h1>
-      </div>
+      <AdminHeading eyebrow="СУРГАЛТЫН КОНТЕНТ" title="Хичээл, шалгалт" description="Их сургууль, хичээл, шалгалтын санг шатлалтайгаар удирд." />
       <UniversityList universities={universities} reload={loadUniversities} />
       <ExamSection
         universities={universities}
@@ -35,13 +34,14 @@ export default function AdminCatalog() {
         setProgramFilter={(v) => { setProgramFilter(v); loadExams(v).catch((e) => toast(e.message)); }}
         reload={() => loadExams(programFilter)}
       />
-      <AcademicRegistrationSection />
+      <div className="ad-catalog-note"><AdminIcon name="graduation" /><p>Оюутны бүртгэлийн салбар, мэргэжлийн жагсаалт нь хичээл, шалгалтаас тусдаа.</p><Link to="/admin/academic-programs" className="ad-text-link">Салбар, мэргэжил<AdminIcon name="arrow" size={16} /></Link></div>
     </>
   );
 }
 
 /* ─────────────── Universities + Programs ─────────────── */
 function UniversityList({ universities, reload }) {
+  const api = useAdminApi();
   const toast = useToast();
   const [uniModal, setUniModal] = useState(null); // {mode:'add'|'edit', uni?}
   const [progModal, setProgModal] = useState(null); // {mode:'add', universityId} | {mode:'edit', program}
@@ -79,7 +79,7 @@ function UniversityList({ universities, reload }) {
                   const ids = u.programs.map((x) => x.id);
                   const i = ids.indexOf(p.id);
                   if (i > 0) { [ids[i - 1], ids[i]] = [ids[i], ids[i - 1]];
-                    api('/admin/catalog/programs/reorder', { method: 'POST', body: { ids } }).then(reload); }
+                    api('/admin/catalog/programs/reorder', { method: 'POST', body: { ids } }).then(reload).catch((error) => toast(error.message)); }
                 }}>↑</button>
                 <button className="btn secondary small" onClick={() => setProgModal({ mode: 'edit', program: p })}>Засах</button>
                 <button className="btn ghost-danger small" onClick={() =>
@@ -116,6 +116,7 @@ function UniversityList({ universities, reload }) {
 }
 
 function UniversityModal({ mode, uni, onClose, onSaved }) {
+  const api = useAdminApi();
   const isEdit = mode === 'edit';
   const [form, setForm] = useState({ name: uni?.name || '', shortName: uni?.shortName || '' });
   const [busy, setBusy] = useState(false);
@@ -132,23 +133,21 @@ function UniversityModal({ mode, uni, onClose, onSaved }) {
     finally { setBusy(false); }
   };
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{isEdit ? 'Сургууль засах' : 'Шинэ сургууль'}</h3>
-        <label>Сургуулийн нэр *</label>
-        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Жишээ: Монголын Их Сургууль" autoFocus />
-        <label>Товч нэр (сонголт)</label>
-        <input value={form.shortName} onChange={(e) => setForm({ ...form, shortName: e.target.value })} placeholder="МУИС" />
+    <AdminDialog title={<>{isEdit ? 'Сургууль засах' : 'Шинэ сургууль'}</>} onClose={onClose} busy={busy}>
+        <label htmlFor="admin-catalog-field-1">Сургуулийн нэр *</label>
+        <input id="admin-catalog-field-1" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Жишээ: Монголын Их Сургууль" autoFocus />
+        <label htmlFor="admin-catalog-field-2">Товч нэр (сонголт)</label>
+        <input id="admin-catalog-field-2" value={form.shortName} onChange={(e) => setForm({ ...form, shortName: e.target.value })} placeholder="МУИС" />
         <div className="btn-row" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
           <button className="btn secondary" onClick={onClose}>Цуцлах</button>
           <button className="btn" disabled={busy || !form.name.trim()} onClick={save}>{busy ? '…' : isEdit ? 'Хадгалах' : 'Нэмэх'}</button>
         </div>
-      </div>
-    </div>
+    </AdminDialog>
   );
 }
 
 function ProgramModal({ mode, program, universityId, universities, onClose, onSaved }) {
+  const api = useAdminApi();
   const isEdit = mode === 'edit';
   const [form, setForm] = useState({
     name: program?.name || '',
@@ -171,35 +170,33 @@ function ProgramModal({ mode, program, universityId, universities, onClose, onSa
     finally { setBusy(false); }
   };
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{isEdit ? 'Хичээл засах' : 'Шинэ хичээл'}</h3>
+    <AdminDialog title={<>{isEdit ? 'Хичээл засах' : 'Шинэ хичээл'}</>} onClose={onClose} busy={busy}>
         {!isEdit && (
           <>
-            <label>Сургууль *</label>
-            <select value={form.universityId} onChange={(e) => setForm({ ...form, universityId: e.target.value })}>
+            <label htmlFor="admin-catalog-field-3">Сургууль *</label>
+            <select id="admin-catalog-field-3" value={form.universityId} onChange={(e) => setForm({ ...form, universityId: e.target.value })}>
               {universities.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           </>
         )}
-        <label>Хичээлийн нэр *</label>
-        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Жишээ: Нэг хувьсагчийн функцийн онол 1Б" autoFocus />
-        <label>Хичээлийн код (сонголт)</label>
-        <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="MATH101" />
-        <label>Салбар сургууль (сонголт)</label>
-        <input value={form.school} onChange={(e) => setForm({ ...form, school: e.target.value })} placeholder="МТЭС" />
+        <label htmlFor="admin-catalog-field-4">Хичээлийн нэр *</label>
+        <input id="admin-catalog-field-4" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Жишээ: Нэг хувьсагчийн функцийн онол 1Б" autoFocus />
+        <label htmlFor="admin-catalog-field-5">Хичээлийн код (сонголт)</label>
+        <input id="admin-catalog-field-5" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="MATH101" />
+        <label htmlFor="admin-catalog-field-6">Салбар сургууль (сонголт)</label>
+        <input id="admin-catalog-field-6" value={form.school} onChange={(e) => setForm({ ...form, school: e.target.value })} placeholder="МТЭС" />
         <p className="small faint" style={{ margin: '4px 0 0' }}>Хоосон орхивал хичээл нь оюутны нүүр хуудаснад шууд харагдана. Мэргэжлийн нэрс (МТЭС, БС, ХЗС, ШУС, ИТС, УТСОУХНУС) бичвэл бүртгэлийн маягтад л ашиглагдана.</p>
         <div className="btn-row" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
           <button className="btn secondary" onClick={onClose}>Цуцлах</button>
           <button className="btn" disabled={busy || !form.name.trim()} onClick={save}>{busy ? '…' : isEdit ? 'Хадгалах' : 'Нэмэх'}</button>
         </div>
-      </div>
-    </div>
+    </AdminDialog>
   );
 }
 
 /* ─────────────── Exams ─────────────── */
 function ExamSection({ universities, exams, programFilter, setProgramFilter, reload }) {
+  const api = useAdminApi();
   const toast = useToast();
   // Шалгалт хичээлд хамаарна — 41 мэргэжил (МТЭС/БС/...) сонголтод орохгүй
   const MAJOR_SCHOOLS = ['МТЭС', 'БС', 'ХЗС', 'ШУС', 'ИТС', 'УТСОУХНУС'];
@@ -288,67 +285,8 @@ function ExamSection({ universities, exams, programFilter, setProgramFilter, rel
   );
 }
 
-/* ─────────────── Бүртгэлийн салбар / хөтөлбөр — тусдаа AcademicProgram ─────────────── */
-function AcademicRegistrationSection() {
-  const [list, setList] = useState([]);
-  const [schoolFilter, setSchoolFilter] = useState('');
-  const [form, setForm] = useState({ university: 'МУИС', school: '', name: '', code: '' });
-  const [editing, setEditing] = useState(null);
-  const toast = useToast();
-  const load = () => api('/academic-programs').then((d) => setList(d.programs)).catch((e) => toast(e.message));
-  useEffect(() => { load(); }, []);
-  const schools = [...new Set(list.map((p) => p.school))].sort();
-  const filtered = schoolFilter ? list.filter((p) => p.school === schoolFilter) : list;
-  const submit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editing) await api(`/admin/academic-programs/${editing}`, { method: 'PUT', body: form });
-      else await api('/admin/academic-programs', { method: 'POST', body: form });
-      toast(editing ? 'Шинэчлэлээ' : 'Нэмлээ');
-      setForm({ university: 'МУИС', school: '', name: '', code: '' }); setEditing(null); load();
-    } catch (err) { toast(err.message); }
-  };
-  return (
-    <>
-      <div className="page-title-row" style={{ marginTop: 32, borderTop: '2px solid var(--rule)', paddingTop: 16 }}>
-        <h2 style={{ margin: 0 }}>Мэргэжлийн жагсаалт</h2>
-        <span className="badge">{list.length}</span>
-      </div>
-      <p className="small muted">Бүртгэлийн <code>Салбар сургууль → Мэргэжил</code> сонголтод хэрэглэнэ — шалгалтын <code>Сургууль / Хөтөлбөр / Шалгалт</code> -аас тусдаа. <code>МТЭС</code> сонговол тухайн салбарын мэргэжлүүд харагдана.</p>
-      <div className="filter-bar">
-        <select value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)}>
-          <option value="">Бүх салбар</option>
-          {schools.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        {schoolFilter && <span className="small muted" style={{ alignSelf: 'center' }}>{filtered.length} хөтөлбөр</span>}
-      </div>
-      <form className="card" onSubmit={submit} style={{ marginTop: 8 }}>
-        <div className="field-inline">
-          <div><label>Салбар *</label><input value={form.school} onChange={(e) => setForm({ ...form, school: e.target.value })} placeholder="МТЭС, ШУС, БС, ХЗС, ИТС, УТСОУХНУС" /></div>
-          <div style={{ flex: 2 }}><label>Хөтөлбөр / Мэргэжил *</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Нягтлан бодох, Программ хангамж, Орон судлал, Багш..." /></div>
-          <div><label>Код</label><input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="ACC101" /></div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <button className="btn small" type="submit">{editing ? 'Хадгалах' : 'Нэмэх'}</button>
-            {editing && <button type="button" className="btn secondary small" style={{ marginLeft: 8 }} onClick={() => { setEditing(null); setForm({ university: 'МУИС', school: '', name: '', code: '' }); }}>Цуцлах</button>}
-          </div>
-        </div>
-      </form>
-      <div className="card" style={{ marginTop: 12 }}>
-        {filtered.length === 0 ? <div className="empty-state">Хөтөлбөр алга.</div> : filtered.map((p) => (
-          <div key={p.id} className="row-link" style={{ padding: '8px 4px' }}>
-            <span><strong>{p.name}</strong> <span className="faint small">— {p.school} · {p.university} {p.code && `· ${p.code}`} · <span className="badge" style={{ marginLeft: 6 }}>{p._count?.students ?? 0} оюутан</span></span></span>
-            <span className="btn-row">
-              <button className="btn secondary small" onClick={() => { setEditing(p.id); setForm({ university: p.university, school: p.school, name: p.name, code: p.code || '' }); }}>Засах</button>
-              <button className="btn ghost-danger small" onClick={() => confirm(`"${p.name}" устгах уу?`) && api(`/admin/academic-programs/${p.id}`, { method: 'DELETE' }).then(() => { toast('Устгалаа'); load(); }).catch((e) => toast(e.message))}>Устгах</button>
-            </span>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
 function ExamModal({ universities, programs, initialProgramId, onClose, onSaved }) {
+  const api = useAdminApi();
   const [form, setForm] = useState({
     programId: initialProgramId || programs[0]?.id || '',
     code: '',
@@ -372,33 +310,30 @@ function ExamModal({ universities, programs, initialProgramId, onClose, onSaved 
     finally { setBusy(false); }
   };
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Шинэ шалгалт</h3>
-        <label>Хөтөлбөр *</label>
-        <select value={form.programId} onChange={(e) => setForm({ ...form, programId: e.target.value })}>
+    <AdminDialog title={<>Шинэ шалгалт</>} onClose={onClose} busy={busy}>
+        <label htmlFor="admin-catalog-field-7">Хөтөлбөр *</label>
+        <select id="admin-catalog-field-7" value={form.programId} onChange={(e) => setForm({ ...form, programId: e.target.value })}>
           <option value="">— Сонгох —</option>
           {programs.map((p) => <option key={p.id} value={p.id}>{p.university} · {p.name}</option>)}
         </select>
-        <label>Шалгалтын код *</label>
-        <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="math1b-2025-fall-variant1" autoFocus />
-        <label>Гарчиг *</label>
-        <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Математик 1Б — Явцын шалгалт (2025)" />
+        <label htmlFor="admin-catalog-field-8">Шалгалтын код *</label>
+        <input id="admin-catalog-field-8" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="math1b-2025-fall-variant1" autoFocus />
+        <label htmlFor="admin-catalog-field-9">Гарчиг *</label>
+        <input id="admin-catalog-field-9" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Математик 1Б — Явцын шалгалт (2025)" />
         <div className="field-inline">
           <div>
-            <label>Он *</label>
-            <input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
+            <label htmlFor="admin-catalog-field-10">Он *</label>
+            <input id="admin-catalog-field-10" type="number" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
           </div>
           <div>
-            <label>Хувилбар</label>
-            <input value={form.variant} onChange={(e) => setForm({ ...form, variant: e.target.value })} placeholder="Variant 1" />
+            <label htmlFor="admin-catalog-field-11">Хувилбар</label>
+            <input id="admin-catalog-field-11" value={form.variant} onChange={(e) => setForm({ ...form, variant: e.target.value })} placeholder="Variant 1" />
           </div>
         </div>
         <div className="btn-row" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
           <button className="btn secondary" onClick={onClose}>Цуцлах</button>
           <button className="btn" disabled={busy || !form.code.trim() || !form.title.trim() || !form.programId} onClick={save}>{busy ? '…' : 'Нэмэх'}</button>
         </div>
-      </div>
-    </div>
+    </AdminDialog>
   );
 }

@@ -8,7 +8,7 @@ router.use(requireAuth, requireAdmin);
 router.get('/', async (_req, res, next) => {
   try {
     const now = new Date();
-    const [mostFlagged, answerGroups, activeUsers, attemptCount, questionCount, newFlagCount, paidStats, giftStats, activePaid, activeGift] =
+    const [mostFlagged, activeUsers, attemptCount, questionCount, newFlagCount, paidStats, giftStats, activePaid, activeGift] =
       await Promise.all([
         prisma.question.findMany({
           where: { flags: { some: {} } },
@@ -21,12 +21,6 @@ router.get('/', async (_req, res, next) => {
             exam: { select: { title: true } },
             _count: { select: { flags: true } },
           },
-        }),
-        // Anonymized student performance per answered question
-        prisma.attemptAnswer.groupBy({
-          by: ['questionId'],
-          where: { attempt: { finishedAt: { not: null } } },
-          _sum: { pointsEarned: true },
         }),
         prisma.user.count(),
         prisma.testAttempt.count(),
@@ -54,37 +48,9 @@ router.get('/', async (_req, res, next) => {
         }),
       ]);
 
-    const qIds = answerGroups.map((g) => g.questionId);
-    const questions = await prisma.question.findMany({
-      where: { id: { in: qIds } },
-      select: { id: true, points: true, tags: true, topic: true },
-    });
-    const qMap = Object.fromEntries(questions.map((q) => [q.id, q]));
-
-    const byTopic = {};
-    for (const g of answerGroups) {
-      const q = qMap[g.questionId];
-      if (!q) continue;
-      const topics = q.topic ? [q.topic] : q.tags.length ? [q.tags.slice(0, 1)] : [];
-      for (const t of topics.flat()) {
-        byTopic[t] ??= { earned: 0, possible: 0 };
-        byTopic[t].earned += g._sum.pointsEarned ?? 0;
-        byTopic[t].possible += q.points;
-      }
-    }
-    const weakTopics = Object.entries(byTopic)
-      .map(([topic, v]) => ({
-        topic,
-        percent: v.possible ? Math.round((v.earned / v.possible) * 100) : 0,
-        answers: v.possible ? v.earned / v.possible : 0,
-        possible: v.possible,
-      }))
-      .sort((a, b) => a.percent - b.percent)
-      .slice(0, 10);
-
     res.json({
       mostFlagged,
-      weakTopics,
+      weakTopics: [],
       totals: {
         users: activeUsers,
         attempts: attemptCount,

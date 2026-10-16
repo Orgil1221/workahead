@@ -1,6 +1,7 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../../api/client.js';
+import { useAdminApi } from './AdminContext.jsx';
+import { AdminDialog } from './AdminUI.jsx';
 import Spinner from '../../components/Spinner.jsx';
 import MathText from '../../components/MathText.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -13,6 +14,7 @@ const emptyForm = {
 };
 
 export default function AdminQuestions() {
+  const api = useAdminApi();
   const [params] = useSearchParams();
   const [exams, setExams] = useState([]);
   const [data, setData] = useState(null);
@@ -51,22 +53,22 @@ export default function AdminQuestions() {
   return (
     <>
       <div className="page-title-row">
-        <h1>Асуултын сан</h1>
+        <div><p className="ad-eyebrow">СУРГАЛТЫН КОНТЕНТ</p><h1>Асуултын сан</h1><p className="ad-page-description">Асуулт, бодолт, зөв хариултын чанарыг хянаж удирд.</p></div>
         <button className="btn small" onClick={() => setEditing({ ...emptyForm })}>+ Асуулт</button>
       </div>
 
       <div className="filter-bar">
-        <select value={filters.examId} onChange={(e) => setFilters({ ...filters, examId: e.target.value })}>
+        <select aria-label="Шалгалтаар шүүх" value={filters.examId} onChange={(e) => setFilters({ ...filters, examId: e.target.value })}>
           <option value="">Бүх шалгалт</option>
           {exams.map((x) => <option key={x.id} value={x.id}>{x.code}</option>)}
         </select>
-        <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
+        <select aria-label="Асуултын төрөл" value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
           <option value="">Бүх төрөл</option>
           <option value="open">Задгай</option>
           <option value="test">Тест</option>
         </select>
         <input placeholder="Сэдэв…" value={filters.topic} onChange={(e) => setFilters({ ...filters, topic: e.target.value })} />
-        <select value={filters.level} onChange={(e) => setFilters({ ...filters, level: e.target.value })}>
+        <select aria-label="Түвшин" value={filters.level} onChange={(e) => setFilters({ ...filters, level: e.target.value })}>
           <option value="">Түвшин бүгд</option>
           <option value="easy">Хялбар</option>
           <option value="medium">Дунд</option>
@@ -93,7 +95,7 @@ export default function AdminQuestions() {
           }} />
           {data.total > data.page * data.pageSize && (
             <button className="btn secondary" style={{ width: '100%' }}
-              onClick={() => load(filters, data.page + 1)}>Дараагийн хуас</button>
+              onClick={() => load(filters, data.page + 1)}>Дараагийн хуудас</button>
           )}
         </>
       )}
@@ -170,6 +172,7 @@ function QuestionTable({ questions, onEdit, onDelete, onMove }) {
 }
 
 function QuestionModal({ form: initial, exams, onClose, onSave }) {
+  const api = useAdminApi();
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -189,14 +192,12 @@ function QuestionModal({ form: initial, exams, onClose, onSave }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{form.id ? 'Асуулт засах' : 'Шинэ асуулт'}</h3>
+    <AdminDialog title={<>{form.id ? 'Асуулт засах' : 'Шинэ асуулт'}</>} onClose={onClose} busy={busy}>
 
         {!form.id && (
           <>
-            <label>Шалгалт *</label>
-            <select value={form.examId} onChange={set('examId')}>
+            <label htmlFor="admin-questions-field-1">Шалгалт *</label>
+            <select id="admin-questions-field-1" value={form.examId} onChange={set('examId')}>
               <option value="">— Сонгох —</option>
               {exams.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
             </select>
@@ -209,8 +210,8 @@ function QuestionModal({ form: initial, exams, onClose, onSave }) {
           <button type="button" className={`btn small ${form.type === 'test' ? '' : 'secondary'}`} onClick={() => setForm((f) => ({ ...f, type: 'test' }))}>Тест (4 сонголт)</button>
         </div>
 
-        <label>Асуултын текст *</label>
-        <textarea rows={3} value={form.prompt} onChange={set('prompt')} />
+        <label htmlFor="admin-questions-field-2">Асуултын текст *</label>
+        <textarea id="admin-questions-field-2" rows={3} value={form.prompt} onChange={set('prompt')} />
         {form.prompt && (
           <div className="card small" style={{ padding: '10px 14px', marginTop: -6 }}>
             <span className="faint mono" style={{ fontSize: '.68rem' }}>УРЬДЧИЛЖ ХАРАХ</span>
@@ -220,31 +221,31 @@ function QuestionModal({ form: initial, exams, onClose, onSave }) {
 
         <div className="field-inline">
           <div>
-            <label>Оноо</label>
-            <input type="number" min="0" step="0.5" value={form.points} onChange={set('points')} />
+            <label htmlFor="admin-questions-field-3">Оноо</label>
+            <input id="admin-questions-field-3" type="number" min="0" step="0.5" value={form.points} onChange={set('points')} />
           </div>
           <div>
-            <label>Сэдэв</label>
-            <input value={form.topic} onChange={set('topic')} />
+            <label htmlFor="admin-questions-field-4">Сэдэв</label>
+            <input id="admin-questions-field-4" value={form.topic} onChange={set('topic')} />
           </div>
         </div>
         <div className="field-inline">
           <div>
-            <label>Түвшин</label>
-            <select value={form.level} onChange={set('level')}>
+            <label htmlFor="admin-questions-field-5">Түвшин</label>
+            <select id="admin-questions-field-5" value={form.level} onChange={set('level')}>
               <option value="">—</option><option value="easy">Хялбар</option>
               <option value="medium">Дунд</option><option value="hard">Хэцүү</option>
             </select>
           </div>
           <div>
-            <label>Жил</label>
-            <input type="number" value={form.year} onChange={set('year')} />
+            <label htmlFor="admin-questions-field-6">Жил</label>
+            <input id="admin-questions-field-6" type="number" value={form.year} onChange={set('year')} />
           </div>
         </div>
-        <label>Эх сурвалж</label>
-        <input value={form.source} onChange={set('source')} />
-        <label>Tag-ууд (таслалаар)</label>
-        <input value={form.tags} onChange={set('tags')} />
+        <label htmlFor="admin-questions-field-7">Эх сурвалж</label>
+        <input id="admin-questions-field-7" value={form.source} onChange={set('source')} />
+        <label htmlFor="admin-questions-field-8">Tag-ууд (таслалаар)</label>
+        <input id="admin-questions-field-8" value={form.tags} onChange={set('tags')} />
 
         {form.type === 'test' ? (
           <>
@@ -261,15 +262,15 @@ function QuestionModal({ form: initial, exams, onClose, onSave }) {
               ))}
             </div>
             <p className="small faint" style={{ marginTop: 6 }}>Зөв хариултын радио товчийг сонгоно. Тест горимд шууд автоматаар дүгнэнэ.</p>
-            <label>Зөв хариултын утга (answer) — тайлбарт хэрэглэнэ</label>
-            <input value={form.answer} onChange={set('answer')} placeholder="Жишээ: x=5" />
+            <label htmlFor="admin-questions-field-9">Зөв хариултын утга (answer) — тайлбарт хэрэглэнэ</label>
+            <input id="admin-questions-field-9" value={form.answer} onChange={set('answer')} placeholder="Жишээ: x=5" />
           </>
         ) : (
           <>
-            <label>Иж бүрэн шийдэл</label>
-            <textarea rows={4} value={form.modelSolution} onChange={set('modelSolution')} />
-            <label>Эцсийн хариулт (Задгай — яг таарвал автоматаар оноо)</label>
-            <input value={form.answer} onChange={set('answer')} />
+            <label htmlFor="admin-questions-field-10">Иж бүрэн шийдэл</label>
+            <textarea id="admin-questions-field-10" rows={4} value={form.modelSolution} onChange={set('modelSolution')} />
+            <label htmlFor="admin-questions-field-11">Эцсийн хариулт (Задгай — яг таарвал автоматаар оноо)</label>
+            <input id="admin-questions-field-11" value={form.answer} onChange={set('answer')} />
           </>
         )}
 
@@ -293,7 +294,6 @@ function QuestionModal({ form: initial, exams, onClose, onSave }) {
             {busy ? 'Хадгалж байна…' : 'Хадгалах'}
           </button>
         </div>
-      </div>
-    </div>
+    </AdminDialog>
   );
 }

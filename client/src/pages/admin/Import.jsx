@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { api } from '../../api/client.js';
+import { useAdminApi } from './AdminContext.jsx';
+import { AdminHeading } from './AdminUI.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
 export default function AdminImport() {
+  const api = useAdminApi();
   const [programs, setPrograms] = useState([]);
   const [programId, setProgramId] = useState('');
   const [results, setResults] = useState(null);
@@ -60,7 +62,7 @@ export default function AdminImport() {
   };
 
   const loadTemplate = () =>
-    fetch('/api/admin/import/template').then((r) => r.json()).then((t) => setRawJson(JSON.stringify(t, null, 2)));
+    api('/admin/import/template').then((template) => setRawJson(JSON.stringify(template, null, 2))).catch((error) => toast(error.message));
 
   const csvImport = async () => {
     if (!programId) return toast('Хичээл сонгоно уу');
@@ -123,7 +125,7 @@ SCHEMA:
 
   return (
     <>
-      <div className="page-title-row"><h1>Контент импорт</h1></div>
+      <AdminHeading eyebrow="СУРГАЛТЫН КОНТЕНТ" title="Контент импорт" description="Хичээлээ сонгоод JSON файл, текст эсвэл CSV-ээс шалгалтын материалыг оруул." />
 
       <div className="card">
         <label htmlFor="program">Импортоо хийх хичээл *</label>
@@ -185,18 +187,18 @@ SCHEMA:
         </p>
         <div className="field-inline">
           <div>
-            <label>Шалгалтын код *</label>
-            <input className="mono" placeholder="math1b-2025-fall-variant1"
+            <label htmlFor="admin-import-field-1">Шалгалтын код *</label>
+            <input id="admin-import-field-1" className="mono" placeholder="math1b-2025-fall-variant1"
               value={csvMeta.code} onChange={(e) => setCsvMeta({ ...csvMeta, code: e.target.value })} />
           </div>
           <div>
-            <label>Гарчиг *</label>
-            <input placeholder="Математик 1Б — Явцын шалгалт (2025)"
+            <label htmlFor="admin-import-field-2">Гарчиг *</label>
+            <input id="admin-import-field-2" placeholder="Математик 1Б — Явцын шалгалт (2025)"
               value={csvMeta.title} onChange={(e) => setCsvMeta({ ...csvMeta, title: e.target.value })} />
           </div>
           <div style={{ maxWidth: 110 }}>
-            <label>Он *</label>
-            <input type="number" value={csvMeta.year} onChange={(e) => setCsvMeta({ ...csvMeta, year: e.target.value })} />
+            <label htmlFor="admin-import-field-3">Он *</label>
+            <input id="admin-import-field-3" type="number" value={csvMeta.year} onChange={(e) => setCsvMeta({ ...csvMeta, year: e.target.value })} />
           </div>
         </div>
         <textarea rows={6} className="mono small" style={{ marginTop: 8 }}

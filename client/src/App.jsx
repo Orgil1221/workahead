@@ -18,6 +18,7 @@ import AdminImport from './pages/admin/Import.jsx';
 import AdminReports from './pages/admin/Reports.jsx';
 import AdminUsers from './pages/admin/Users.jsx';
 import AdminNotify from './pages/admin/Notify.jsx';
+import AdminSettings from './pages/admin/Settings.jsx';
 
 // Student pages
 import StudentHome from './pages/student/Home.jsx';
@@ -38,6 +39,7 @@ const DashboardPreview = import.meta.env.DEV ? lazy(() => import('./pages/studen
 const ProfilePreview = import.meta.env.DEV ? lazy(() => import('./pages/student/ProfilePreview.jsx')) : null;
 const PaymentPreview = import.meta.env.DEV ? lazy(() => import('./pages/student/PaymentPreview.jsx')) : null;
 const StudyPreview = import.meta.env.DEV ? lazy(() => import('./pages/student/StudyPreview.jsx')) : null;
+const AdminPreview = import.meta.env.DEV ? lazy(() => import('./pages/admin/AdminPreview.jsx')) : null;
 
 function Guard({ children, admin }) {
   const { user } = useAuth();
@@ -141,11 +143,12 @@ function Footer() {
 
 export default function App() {
   const { pathname } = useLocation();
-  const isLocalPreview = import.meta.env.DEV && (['/preview/landing', '/preview/dashboard', '/preview/profile', '/preview/payment'].includes(pathname) || pathname === '/preview/study' || pathname.startsWith('/preview/study/'));
+  const isLocalPreview = import.meta.env.DEV && (['/preview/landing', '/preview/dashboard', '/preview/profile', '/preview/payment'].includes(pathname) || ['/preview/study', '/preview/admin'].some((base) => pathname === base || pathname.startsWith(base + '/')));
   return (
     <>
       {!isLocalPreview && <WarmupBanner />}
       <Routes>
+        {AdminPreview && <Route path="/preview/admin/*" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><AdminPreview /></Suspense>} />}
         {import.meta.env.DEV && <Route path="/preview/landing" element={<Landing preview />} />}
         {StudyPreview && <Route path="/preview/study/*" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><StudyPreview /></Suspense>} />}
         {DashboardPreview && <Route path="/preview/dashboard" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><DashboardPreview /></Suspense>} />}
@@ -166,6 +169,7 @@ export default function App() {
           <Route path="reports" element={<AdminReports />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="notify" element={<AdminNotify />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
 
         <Route path="/student" element={<Guard><StudentLayout /></Guard>}>

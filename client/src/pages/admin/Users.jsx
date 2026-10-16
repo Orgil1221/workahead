@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client.js';
+import { useAdminApi, useAdminUser } from './AdminContext.jsx';
+import { AdminDialog, AdminHeading, AdminIcon, AdminEmpty, AdminError } from './AdminUI.jsx';
 import Spinner from '../../components/Spinner.jsx';
-import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
 // Зөвхөн баталгаат мэргэжлүүдийг (МТЭС/БС/ХЗС/ШУС/ИТС/УТСОУХНУС) жагсаалтад үлдээнэ
@@ -9,16 +9,21 @@ const VALID_SCHOOLS = ['МТЭС', 'БС', 'ХЗС', 'ШУС', 'ИТС', 'УТС
 const majorsOf = (list) => list.filter((p) => VALID_SCHOOLS.includes(p.school));
 
 export default function AdminUsers() {
+  const api = useAdminApi();
   const [users, setUsers] = useState(null);
   const [programs, setPrograms] = useState([]);
   const [plans, setPlans] = useState([]);
   const [adding, setAdding] = useState(false);
   const [gifting, setGifting] = useState(null);
-  const { user: me } = useAuth();
+  const me = useAdminUser();
+  const [search, setSearch] = useState('');
+  const [role, setRole] = useState('ALL');
+  const [error, setError] = useState(null);
   const toast = useToast();
   const majorPrograms = majorsOf(programs);
 
-  const load = () => api('/admin/users').then((d) => setUsers(d.users)).catch((e) => toast(e.message));
+  const load = () => { setError(null); return api('/admin/users').then((data) => setUsers(data.users)).catch(setError); };
+  const visibleUsers = (users || []).filter((user) => (role === 'ALL' || user.role === role) && [user.name, user.email, user.program?.name, user.program?.school].filter(Boolean).join(' ').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
 
   useEffect(() => {
     load();
@@ -66,20 +71,20 @@ export default function AdminUsers() {
 
   return (
     <>
-      <div className="page-title-row">
-        <h1>Хэрэглэгчийн удирдлага</h1>
-        <button className="btn small" onClick={() => setAdding(true)}>+ Хэрэглэгч</button>
-      </div>
+      <AdminHeading eyebrow="ОЮУТНЫ УДИРДЛАГА" title="Хэрэглэгчид" description="Бүртгэл, суралцах эрх, мэргэжлийн мэдээллийг нэг дор удирд."><button className="btn small" onClick={() => setAdding(true)}><AdminIcon name="users" size={17} />Хэрэглэгч нэмэх</button></AdminHeading>
+      <div className="filter-bar ad-user-filters"><div className="ad-user-search"><AdminIcon name="search" size={18} /><input aria-label="Хэрэглэгч хайх" placeholder="Нэр, имэйл, мэргэжлээр хайх…" value={search} onChange={(event) => setSearch(event.target.value)} /></div><select aria-label="Хэрэглэгчийн эрхээр шүүх" value={role} onChange={(event) => setRole(event.target.value)}><option value="ALL">Бүх эрх</option><option value="STUDENT">Оюутан</option><option value="ADMIN">Админ</option></select></div>
+      {users && <div className="ad-users-summary"><span>Харагдаж буй <strong>{visibleUsers.length} / {users.length}</strong></span><span>Оюутан<strong>{users.filter((user) => user.role === 'STUDENT').length}</strong></span><span>Админ<strong>{users.filter((user) => user.role === 'ADMIN').length}</strong></span></div>}
+      {error && <AdminError error={error} retry={load} />}
 
-      {!users ? <Spinner /> : (
+      {!users ? !error && <Spinner /> : !visibleUsers.length ? <div className="card"><AdminEmpty title={users.length ? "Хэрэглэгч олдсонгүй" : "Хэрэглэгч бүртгэгдээгүй байна"} icon="users">Хайлтын үг болон эрхийн шүүлтүүрээ өөрчилж үзээрэй.</AdminEmpty></div> : (
         <div className="card">
-          {users.map((u) => {
+          {visibleUsers.map((u) => {
             const sub = u.subscription;
             const daysLeft = sub?.expiresAt ? Math.max(0, Math.ceil((new Date(sub.expiresAt) - new Date()) / 86400000)) : null;
             return (
-              <div key={u.id} className="row-link" style={{ flexWrap: 'wrap' }}>
-                <span style={{ minWidth: 0, flex: 1 }}>
-                  <strong>{u.name}</strong>{u.id === me.id && <span className="badge blue" style={{ marginLeft: 6 }}>ТА</span>}
+              <div key={u.id} className="row-link ad-user-row">
+                <div className="ad-user-info"><span className="ad-avatar">{u.name.slice(0, 1)}</span><div>
+                  <strong>{u.name}</strong>{u.id === me?.id && <span className="badge blue" style={{ marginLeft: 6 }}>ТА</span>}
                   {sub ? (
                     <span className={`badge ${sub.isGift ? 'blue' : 'ok'}`} style={{ marginLeft: 6 }}>
                       {sub.isGift ? `Gift • ${daysLeft !== null ? daysLeft + ' хоног' : ''}` : `Төлбөрт • ${daysLeft !== null ? daysLeft + ' хоног' : ''}`}
@@ -96,9 +101,9 @@ export default function AdminUsers() {
                       {u.program.school ? `${u.program.school} · ` : ''}{u.program.name}
                     </span>
                   )}
-                </span>
-                <span className="btn-row" style={{ flexWrap: 'wrap' }}>
-                  <select value={u.program?.id || ''} onChange={(e) => setProgram(u, e.target.value)}
+                </div></div>
+                <span className="btn-row ad-user-actions">
+                  <select aria-label={u.name + ' — мэргэжил'} value={u.program?.id || ''} onChange={(e) => setProgram(u, e.target.value)}
                     style={{ width: 'auto', fontSize: '.78rem', padding: '4px 6px', maxWidth: 180 }}>
                     <option value="">Мэргэжилгүй</option>
                     {majorPrograms.map((p) => <option key={p.id} value={p.id}>{p.school ? `${p.school} · ` : ''}{p.name}</option>)}
@@ -113,7 +118,7 @@ export default function AdminUsers() {
                   <button className={`btn small ${u.role === 'ADMIN' ? '' : 'secondary'}`} onClick={() => toggleRole(u)}>
                     {u.role === 'ADMIN' ? 'Админ' : 'Оюутан'}
                   </button>
-                  {u.id !== me.id && (
+                  {u.id !== me?.id && (
                     <button className="btn ghost-danger small" onClick={() => del(u)}>Устгах</button>
                   )}
                 </span>
@@ -132,12 +137,10 @@ export default function AdminUsers() {
 function GiftModal({ user, plans, onClose, onGift }) {
   const [planId, setPlanId] = useState(plans[0]?.id || '');
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Gift эрх олгох — {user.name}</h3>
+    <AdminDialog title={<>Gift эрх олгох — {user.name}</>} onClose={onClose}>
         <p className="small muted">{user.email}</p>
-        <label>Багц</label>
-        <select value={planId} onChange={(e) => setPlanId(e.target.value)}>
+        <label htmlFor="admin-users-field-1">Багц</label>
+        <select id="admin-users-field-1" value={planId} onChange={(e) => setPlanId(e.target.value)}>
           {plans.map((p) => <option key={p.id} value={p.id}>{p.title} — {new Intl.NumberFormat('mn-MN').format(p.priceMnt)}₮ / {p.durationDays} хоног</option>)}
         </select>
         <p className="small faint" style={{ marginTop: 10 }}>30 хоногийн эрх giftлэгдэх ба төлбөрт тооцогдохгүй, статистикт орохгүй. Идэвхтэй эрх байвал хугацаа сунгагдана.</p>
@@ -145,12 +148,12 @@ function GiftModal({ user, plans, onClose, onGift }) {
           <button className="btn secondary" onClick={onClose}>Цуцлах</button>
           <button className="btn" onClick={() => onGift(user.id, planId)}>Gift олгох</button>
         </div>
-      </div>
-    </div>
+    </AdminDialog>
   );
 }
 
 function AddUserModal({ programs, onClose, onSaved }) {
+  const api = useAdminApi();
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'STUDENT', programId: '' });
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -168,18 +171,16 @@ function AddUserModal({ programs, onClose, onSaved }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Шинэ хэрэглэгч</h3>
-        <label>Нэр *</label><input value={form.name} onChange={set('name')} />
-        <label>Имэйл *</label><input type="email" value={form.email} onChange={set('email')} />
-        <label>Нууц үг *</label><input type="password" value={form.password} onChange={set('password')} />
-        <label>Эрх</label>
-        <select value={form.role} onChange={set('role')}>
+    <AdminDialog title={<>Шинэ хэрэглэгч</>} onClose={onClose} busy={busy}>
+        <label htmlFor="admin-users-field-2">Нэр *</label><input id="admin-users-field-2" value={form.name} onChange={set('name')} />
+        <label htmlFor="admin-users-field-3">Имэйл *</label><input id="admin-users-field-3" type="email" value={form.email} onChange={set('email')} />
+        <label htmlFor="admin-users-field-4">Нууц үг *</label><input id="admin-users-field-4" type="password" value={form.password} onChange={set('password')} />
+        <label htmlFor="admin-users-field-5">Эрх</label>
+        <select id="admin-users-field-5" value={form.role} onChange={set('role')}>
           <option value="STUDENT">Оюутан</option><option value="ADMIN">Админ</option>
         </select>
-        <label>Хөтөлбөр</label>
-        <select value={form.programId} onChange={set('programId')}>
+        <label htmlFor="admin-users-field-6">Хөтөлбөр</label>
+        <select id="admin-users-field-6" value={form.programId} onChange={set('programId')}>
           <option value="">— Сонгохгүй —</option>
           {majorPrograms.length > 0 ? majorPrograms.map((p) => (
             <option key={p.id} value={p.id}>{p.university !== 'Монголын Их Сургууль' ? `${p.university} · ` : ''}{p.school ? `${p.school} · ` : ''}{p.name}</option>
@@ -193,7 +194,6 @@ function AddUserModal({ programs, onClose, onSaved }) {
             {busy ? '…' : 'Нэмэх'}
           </button>
         </div>
-      </div>
-    </div>
+    </AdminDialog>
   );
 }
