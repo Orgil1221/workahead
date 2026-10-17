@@ -1,7 +1,11 @@
 import crypto from 'node:crypto';
 
-// Business mail OTP — supports Resend API, SMTP (Nodemailer), or console fallback
-// Env: RESEND_API_KEY, EMAIL_FROM (e.g. noreply@workahead.me), BUSINESS_MAIL, SMTP_HOST/PORT/USER/PASS
+// Business mail OTP — failover chain: Resend → Brevo → SMTP (Nodemailer) → console.
+// Env: RESEND_API_KEY, BREVO_API_KEY, EMAIL_FROM (e.g. noreply@workahead.me), BUSINESS_MAIL,
+//      SMTP_HOST/PORT/USER/PASS, EMAIL_PROVIDER_ORDER (default "resend,brevo,smtp"),
+//      EMAIL_QUOTA_COOLDOWN_MIN / EMAIL_QUOTA_COOLDOWN_MAX_MIN / EMAIL_FAIL_COOLDOWN_SEC.
+// A provider that fails (quota, rate limit, auth, network) is skipped for a cooldown window
+// instead of being retried on every OTP; quota cooldowns double per consecutive failure.
 
 export function generateOtp() {
   return String(crypto.randomInt(100000, 1000000)); // 6 digits
@@ -59,40 +63,83 @@ function buildOtpHtml({ otp, purpose }) {
   </div>`;
 }
 
-export async function sendOtpEmail(to, otp, purpose = 'verify') {
-  const from = process.env.EMAIL_FROM || process.env.BUSINESS_MAIL || 'noreply@workahead.me';
-  const copy = EMAIL_COPY[purpose] || EMAIL_COPY.verify;
-  const subject = copy.subject;
-  const html = buildOtpHtml({ otp, purpose });
-  const text = `WorkAhead — ${copy.title}: ${otp} (10 минут хүчинтэй). Хэнд ч битгий хуваалцаарай. www.workahead.me`;
+function envNum(name, fallback) {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
 
-  // 1. Resend API (business mail new API — prioritized)
-  if (process.env.RESEND_API_KEY) {
-    try {
+function parseFrom(from) {
+  const m = /^(.*)<([^>]+)>\s*$/.exec(from.trim());
+  if (m) return { name: m[1].trim().replace(/^"|"$/g, '') || 'WorkAhead', email: m[2].trim() };
+  return { name: 'WorkAhead', email: from.trim() };
+}
+
+async function httpError(res) {
+  const detail = (await res.text()).slice(0, 300);
+  const e = new Error(`HTTP ${res.status}`);
+  e.status = res.status;
+  e.detail = detail;
+  return e;
+}
+
+function failureClass(e) {
+  const detail = String(e?.detail || e?.message || '');
+  if (e?.status === 402 || /quota|max_quota|daily limit|sending limit/i.test(detail)) return 'quota';
+  if (e?.status === 429 || /rate limit|too many requests|requests per second/i.test(detail)) return 'rate';
+  if (e?.status === 401 || e?.status === 403 || e?.code === 'EAUTH') return 'auth';
+  return 'other';
+}
+
+function envMinutes(name, fallback) {
+  return envNum(name, fallback) * 60_000;
+}
+
+function cooldownMs(kind, consecutiveFails) {
+  if (kind !== 'quota') return envNum('EMAIL_FAIL_COOLDOWN_SEC', 90) * 1000;
+  const base = envMinutes('EMAIL_QUOTA_COOLDOWN_MIN', 30);
+  const max = envMinutes('EMAIL_QUOTA_COOLDOWN_MAX_MIN', 360);
+  return Math.min(base * 2 ** Math.max(0, consecutiveFails - 1), Math.max(base, max));
+}
+
+const providers = {
+  resend: {
+    configured: () => Boolean(process.env.RESEND_API_KEY),
+    send: async (msg) => {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ from, to, subject, html, text }),
+        body: JSON.stringify({ from: msg.from, to: msg.to, subject: msg.subject, html: msg.html, text: msg.text }),
       });
-      if (!res.ok) {
-        const body = await res.text();
-        console.error('Resend failed:', res.status, body);
-        throw new Error('Resend failed');
-      }
-      console.log(`OTP sent via Resend to ${to}`);
-      return true;
-    } catch (e) {
-      console.error('Resend error:', e.message);
-      // fall through to SMTP/console
-    }
-  }
-
-  // 2. SMTP via Nodemailer if configured
-  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-    try {
+      if (!res.ok) throw await httpError(res);
+    },
+  },
+  brevo: {
+    configured: () => Boolean(process.env.BREVO_API_KEY),
+    send: async (msg) => {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: parseFrom(msg.from),
+          to: [{ email: msg.to }],
+          subject: msg.subject,
+          htmlContent: msg.html,
+          textContent: msg.text,
+        }),
+      });
+      if (!res.ok) throw await httpError(res);
+    },
+  },
+  smtp: {
+    configured: () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER),
+    send: async (msg) => {
       const nodemailer = await import('nodemailer');
       const transporter = nodemailer.default.createTransport({
         host: process.env.SMTP_HOST,
@@ -100,19 +147,46 @@ export async function sendOtpEmail(to, otp, purpose = 'verify') {
         secure: process.env.SMTP_SECURE === 'true',
         auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
       });
-      await transporter.sendMail({ from, to, subject, html, text });
-      console.log(`OTP sent via SMTP to ${to}`);
+      await transporter.sendMail({ from: msg.from, to: msg.to, subject: msg.subject, html: msg.html, text: msg.text });
+    },
+  },
+};
+
+const health = new Map(); // provider → { disabledUntil: ms epoch, fails: n }
+
+function providerOrder() {
+  const raw = process.env.EMAIL_PROVIDER_ORDER || 'resend,brevo,smtp';
+  return raw.split(',').map((s) => s.trim().toLowerCase()).filter((s) => providers[s]);
+}
+
+export async function sendOtpEmail(to, otp, purpose = 'verify') {
+  const from = process.env.EMAIL_FROM || process.env.BUSINESS_MAIL || 'noreply@workahead.me';
+  const copy = EMAIL_COPY[purpose] || EMAIL_COPY.verify;
+  const msg = { from, to, subject: copy.subject, html: buildOtpHtml({ otp, purpose }), text: `WorkAhead — ${copy.title}: ${otp} (10 минут хүчинтэй). Хэнд ч битгий хуваалцаарай. www.workahead.me` };
+
+  for (const name of providerOrder()) {
+    if (!providers[name].configured()) continue;
+    const state = health.get(name) || { disabledUntil: 0, fails: 0 };
+    if (Date.now() < state.disabledUntil) continue; // known-down: skip without waiting on its latency
+    try {
+      await providers[name].send(msg);
+      health.set(name, { disabledUntil: 0, fails: 0 });
+      console.log(`OTP sent via ${name} to ${to}`);
       return true;
     } catch (e) {
-      console.error('SMTP error:', e.message);
+      const kind = failureClass(e);
+      const fails = state.fails + 1;
+      const wait = cooldownMs(kind, fails);
+      health.set(name, { disabledUntil: Date.now() + wait, fails });
+      console.error(`Email ${name} ${kind} failure — skipping ${Math.round(wait / 60_000)}m (fails=${fails}):`, e?.detail || e.message);
     }
   }
 
-  // 3. Fallback — console + still succeed for dev/test (OTP visible in server logs)
-  console.log(`[OTP Fallback] To: ${to} | Code: ${otp} | From: ${from} — set RESEND_API_KEY or SMTP_HOST to send real mail`);
+  // Console fallback — still succeeds for dev/test (OTP visible in server logs)
+  console.log(`[OTP Fallback] To: ${to} | Code: ${otp} | From: ${from} — set RESEND_API_KEY / BREVO_API_KEY / SMTP_HOST to send real mail`);
   return true;
 }
 
 export function isEmailConfigured() {
-  return Boolean(process.env.RESEND_API_KEY || (process.env.SMTP_HOST && process.env.SMTP_USER));
+  return Boolean(process.env.RESEND_API_KEY || process.env.BREVO_API_KEY || (process.env.SMTP_HOST && process.env.SMTP_USER));
 }
