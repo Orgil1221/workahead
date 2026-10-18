@@ -55,7 +55,11 @@ if (!process.env.CSRF_SECRET && !process.env.JWT_SECRET && process.env.NODE_ENV 
 }
 const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || process.env.JWT_SECRET || 'fallback-secret-change-me',
-  getSessionIdentifier: (req) => req.user?.id || req.ip || 'default',
+  getSessionIdentifier: (req) => {
+    const header = req.headers.authorization || '';
+    const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
+    return bearer || req.cookies?.wa_token || 'anonymous';
+  },
   cookieName: 'x-csrf-token',
   cookieOptions: {
     sameSite: 'Lax',
@@ -65,9 +69,12 @@ const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   },
   size: 64,
   ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
-  getTokenFromRequest: (req) => req.headers['x-csrf-token'] || req.headers['x-xsrf-token'],
+  getCsrfTokenFromRequest: (req) => req.headers['x-csrf-token'] || req.headers['x-xsrf-token'],
 });
-app.get('/api/auth/csrf', (req, res) => res.json({ csrfToken: generateCsrfToken(req, res) }));
+app.get('/api/auth/csrf', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ csrfToken: generateCsrfToken(req, res) });
+});
 // Webhook uses HMAC, not CSRF — skip; login/register/logout/otp/forgot/seed need no CSRF before auth (seed is admin JWT only)
 app.use((req, res, next) => {
   if (req.path === '/api/payments/webhook' || req.path === '/api/auth/login' || req.path === '/api/auth/register' || req.path === '/api/auth/csrf' || req.path === '/api/auth/logout' || req.path === '/api/auth/send-otp' || req.path === '/api/auth/verify-otp' || req.path === '/api/auth/send-register-otp' || req.path === '/api/auth/forgot-password' || req.path === '/api/auth/reset-password' || req.path === '/api/admin/academic-programs/seed') return next();

@@ -1,5 +1,6 @@
 const BASE = '/api';
 let csrfToken = null;
+let csrfPending = null;
 
 function getDeviceType() {
   try {
@@ -33,10 +34,17 @@ async function fetchWithTimeout(url, opts = {}, timeout = DEFAULT_TIMEOUT) {
 
 async function getCsrfToken() {
   if (csrfToken) return csrfToken;
+  if (!csrfPending) csrfPending = fetchCsrfToken().finally(() => { csrfPending = null; });
+  return csrfPending;
+}
+
+async function fetchCsrfToken() {
   // retry csrf fetch with short timeout — don't block POST forever
   for (let i = 0; i <= 1; i++) {
     try {
-      const r = await fetchWithTimeout(BASE + '/auth/csrf', { credentials: 'include' }, 8000);
+      const token = localStorage.getItem('wa_token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const r = await fetchWithTimeout(BASE + '/auth/csrf', { credentials: 'include', headers }, 8000);
       const d = await r.json().catch(() => ({}));
       if (d.csrfToken) {
         csrfToken = d.csrfToken;
@@ -88,12 +96,24 @@ export async function api(path, { method = 'GET', body, formData } = {}) {
 
       // longer timeout on retries — cold start needs it
       const timeout = attempt === 0 ? DEFAULT_TIMEOUT : 15000;
-      const res = await fetchWithTimeout(BASE + path, {
+      const options = {
         method,
         headers,
         body: formData ? formData : body ? JSON.stringify(body) : undefined,
         credentials: 'include',
-      }, timeout);
+      };
+      let res = await fetchWithTimeout(BASE + path, options, timeout);
+      if (res.status === 403 && method !== 'GET' && method !== 'HEAD') {
+        const failure = await res.clone().json().catch(() => ({}));
+        if (failure.code === 'EBADCSRFTOKEN') {
+          csrfToken = null;
+          const csrf = await getCsrfToken();
+          if (csrf) {
+            headers['x-csrf-token'] = csrf;
+            res = await fetchWithTimeout(BASE + path, options, timeout);
+          }
+        }
+      }
 
       // retry on Render 502/503/504 waking up — but don't retry app-level gateway errors
       if (res.status === 502 || res.status === 503 || res.status === 504) {
