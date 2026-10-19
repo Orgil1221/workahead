@@ -5,6 +5,7 @@ import ThemeToggle from './ThemeToggle.jsx';
 import { useAdmin, useAdminUser } from '../pages/admin/AdminContext.jsx';
 import { AdminIcon } from '../pages/admin/AdminUI.jsx';
 import '../pages/admin/Admin.css';
+import ChatInviteToast from '../chat/ChatInviteToast.jsx';
 
 const groups = [
   { label: 'ХЯНАЛТ', items: [{ path: '', label: 'Хяналтын самбар', icon: 'overview' }] },
@@ -16,6 +17,7 @@ const groups = [
   ] },
   { label: 'УДИРДЛАГА', items: [
     { path: '/users', label: 'Хэрэглэгчид', icon: 'users' },
+    { path: '/chat', label: 'Chat', icon: 'users' },
     { path: '/academic-programs', label: 'Салбар, мэргэжил', icon: 'graduation' },
     { path: '/notify', label: 'Мэдэгдэл', icon: 'bell' },
     { path: '/settings', label: 'Тохиргоо', icon: 'settings' },
@@ -49,7 +51,7 @@ export default function AdminLayout() {
   function openDrawer() { drawerRef.current.showModal(); setDrawerOpen(true); }
   function onDrawerClosed() { setDrawerOpen(false); menuRef.current?.focus(); }
   function navigation() {
-    return <nav aria-label="Админы үндсэн цэс">{groups.map((group) => <div className="ad-nav-group" key={group.label}><p>{group.label}</p>{group.items.map((item) => <NavLink key={item.path} to={base + item.path} end={!item.path} onClick={closeDrawer} className={({ isActive }) => 'ad-nav-link' + (isActive ? ' is-active' : '')}><AdminIcon name={item.icon} /><span>{item.label}</span><AdminIcon name="chevron" size={13} /></NavLink>)}</div>)}</nav>;
+    return <nav aria-label="Админы үндсэн цэс">{groups.map((group) => <div className="ad-nav-group" key={group.label}><p>{group.label}</p>{group.items.filter((item) => !preview || item.path !== '/chat').map((item) => <NavLink key={item.path} to={base + item.path} end={!item.path} onClick={closeDrawer} className={({ isActive }) => 'ad-nav-link' + (isActive ? ' is-active' : '')}><AdminIcon name={item.icon} /><span>{item.label}</span><AdminIcon name="chevron" size={13} /></NavLink>)}</div>)}</nav>;
   }
   function brand() {
     return <Link className="ad-brand" to={base}>Work<span>·</span>Ahead<small>УДИРДЛАГЫН СИСТЕМ</small></Link>;
@@ -59,6 +61,7 @@ export default function AdminLayout() {
   }
   const section = current.path.slice(1) || 'dashboard';
   return <div className="admin-shell">
+    <ChatInviteToast />
     <a href="#admin-content" className="ad-skip-link">Үндсэн агуулга руу</a>
     <aside className="ad-sidebar">{brand()}{navigation()}<div className="ad-sidebar-bottom"><a href="/" target="_blank" rel="noreferrer" className="ad-site-link"><AdminIcon name="external" size={17} />Сайт нээх</a>{identity()}</div></aside>
     <div className="ad-main">

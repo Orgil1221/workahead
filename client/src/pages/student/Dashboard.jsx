@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import DashboardView from './DashboardView.jsx';
+import { NavLink } from 'react-router-dom';
+import History from './History.jsx';
+import '../../chat/Chat.css';
 
-export default function StudentDashboard() {
+function DashboardData() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [request, setRequest] = useState(0);
@@ -43,4 +46,8 @@ export default function StudentDashboard() {
   );
 
   return <DashboardView {...data} />;
+}
+
+export default function StudentDashboard({ history = false }) {
+  return <><nav className="progress-switch" aria-label="Ахицын хэсгүүд"><NavLink to="/student/dashboard" end>Миний ахиц</NavLink><NavLink to="/student/dashboard/history">Дүнгийн түүх</NavLink></nav>{history ? <History /> : <DashboardData />}</>;
 }

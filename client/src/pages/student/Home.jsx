@@ -2,10 +2,21 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client.js';
 import Spinner from '../../components/Spinner.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import './Home.css';
 
 export default function StudentHome() {
+  const { user } = useAuth();
   const [courses, setCourses] = useState(null);
   const [query, setQuery] = useState('');
+  const [hasVisitedChat, setHasVisitedChat] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    setHasVisitedChat(null);
+    if (user?.id) api('/chat/visit').then((result) => { if (active) setHasVisitedChat(result.hasVisited); }).catch(() => {});
+    return () => { active = false; };
+  }, [user?.id]);
 
   useEffect(() => {
     api('/catalog')
@@ -44,7 +55,7 @@ export default function StudentHome() {
         </p>
       </div>
 
-      <div className="page-title-row"><h2>Хичээлүүд</h2></div>
+      <div className="page-title-row home-courses-heading"><h2>Хичээлүүд</h2><Link className="home-chat-link" to="/student/chat" aria-label="ALL CHAT"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H5l-3 2v-10a9.5 9.5 0 0 1 19 0ZM7 10h10M7 14h6" /></svg>ALL CHAT{hasVisitedChat === false && <span className="home-chat-new" title="Шинэ боломж">NEW</span>}</Link></div>
       {courses.length > 3 && (
         <input
           className="course-search"

@@ -160,7 +160,7 @@ function PasswordForm({ onChangePassword, onClose }) {
   </fieldset></form>;
 }
 
-export default function ProfileView({ user, plans, plansError = false, onRetryPlans, loadPrograms, onSaveProfile, onChangePassword, onLogout, paymentPath = '/student/payment' }) {
+export default function ProfileView({ user, plans, plansError = false, onRetryPlans, loadPrograms, onSaveProfile, onChangePassword, onLogout, paymentPath = '/student/payment', chatSettings }) {
   const [editing, setEditing] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [aurora, setAurora] = useState(() => {
@@ -208,6 +208,7 @@ export default function ProfileView({ user, plans, plansError = false, onRetryPl
             <div id="pf-password-panel">{passwordOpen && <PasswordForm onChangePassword={onChangePassword} onClose={() => setPasswordOpen(false)} />}</div>
             <div className="pf-setting-row pf-appearance"><span className="pf-setting-icon"><Icon name="sparkle" size={19} /></span><div className="pf-setting-copy"><strong id="pf-aurora-label">Арын туяа</strong><span id="pf-aurora-description">Зөөлөн хөдөлгөөнтэй дэвсгэр. Унтраавал батарей хэмнэнэ.</span></div><button type="button" className="pf-switch" role="switch" aria-checked={aurora} aria-labelledby="pf-aurora-label" aria-describedby="pf-aurora-description" onClick={() => setAurora((value) => !value)}><span /></button></div>
           </section>
+          {chatSettings}
         </div>
 
         <aside className="pf-aside" aria-label="Багц ба тусламж">

@@ -34,12 +34,14 @@ import History from './pages/student/History.jsx';
 import Notifications from './pages/student/Notifications.jsx';
 import Payment from './pages/student/Payment.jsx';
 import Terms from './pages/Terms.jsx';
+import Chat from './chat/Chat.jsx';
 
 const DashboardPreview = import.meta.env.DEV ? lazy(() => import('./pages/student/DashboardPreview.jsx')) : null;
 const ProfilePreview = import.meta.env.DEV ? lazy(() => import('./pages/student/ProfilePreview.jsx')) : null;
 const PaymentPreview = import.meta.env.DEV ? lazy(() => import('./pages/student/PaymentPreview.jsx')) : null;
 const StudyPreview = import.meta.env.DEV ? lazy(() => import('./pages/student/StudyPreview.jsx')) : null;
 const AdminPreview = import.meta.env.DEV ? lazy(() => import('./pages/admin/AdminPreview.jsx')) : null;
+const ChatDemo = import.meta.env.DEV ? lazy(() => import('./chat/ChatDemo.jsx')) : null;
 
 function Guard({ children, admin }) {
   const { user } = useAuth();
@@ -148,6 +150,7 @@ export default function App() {
     <>
       {!isLocalPreview && <WarmupBanner />}
       <Routes>
+        {ChatDemo && <Route path="/preview/chat" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><ChatDemo /></Suspense>} />}
         {AdminPreview && <Route path="/preview/admin/*" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><AdminPreview /></Suspense>} />}
         {import.meta.env.DEV && <Route path="/preview/landing" element={<Landing preview />} />}
         {StudyPreview && <Route path="/preview/study/*" element={<Suspense fallback={<p role="status">Ачаалж байна…</p>}><StudyPreview /></Suspense>} />}
@@ -170,6 +173,7 @@ export default function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="notify" element={<AdminNotify />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="chat" element={<Chat />} />
         </Route>
 
         <Route path="/student" element={<Guard><StudentLayout /></Guard>}>
@@ -181,6 +185,8 @@ export default function App() {
           <Route path="review" element={<Review />} />
           <Route path="profile" element={<Profile />} />
           <Route path="dashboard" element={<StudentDashboard />} />
+          <Route path="dashboard/history" element={<StudentDashboard history />} />
+          <Route path="chat" element={<Chat />} />
           <Route path="bookmarks" element={<Bookmarks />} />
           <Route path="history" element={<History />} />
           <Route path="notifications" element={<Notifications />} />

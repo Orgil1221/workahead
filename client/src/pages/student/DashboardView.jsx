@@ -137,7 +137,7 @@ export default function DashboardView({ attempts, topics, preview = false, previ
 
       <div className="ld-bottom-grid">
         <section className="ld-panel ld-history">
-          <div className="ld-panel-heading"><div><p className="ld-eyebrow">ТАНЫ ХИЙСЭН АЖИЛ</p><h2>Сүүлийн шалгалтууд</h2></div>{!preview && <Link className="ld-text-link" to="/student/history">Бүгд <Icon name="arrow" size={16} /></Link>}</div>
+          <div className="ld-panel-heading"><div><p className="ld-eyebrow">ТАНЫ ХИЙСЭН АЖИЛ</p><h2>Сүүлийн шалгалтууд</h2></div>{!preview && <Link className="ld-text-link" to="/student/dashboard/history">Бүгд <Icon name="arrow" size={16} /></Link>}</div>
           {data.recent.length === 0 ? <div className="ld-small-empty">Энэ хугацаанд дуусгасан шалгалт алга.</div> : <div className="ld-recent-list">{data.recent.map((attempt) => {
             const percent = scorePercent(attempt);
             const content = <><span className="ld-attempt-icon"><Icon name={attempt.mode === 'TEST' ? 'target' : 'book'} size={19} /></span><span className="ld-attempt-info"><strong>{attempt.exam?.title || 'Шалгалт'}</strong><span>{dateLabel(attempt.finishedAt)} <span aria-hidden="true">·</span> {attempt.mode === 'TEST' ? 'Тест' : 'Задгай бодлого'}</span></span><span className={`ld-attempt-score${percent >= 80 ? ' is-strong' : ''}`}><strong>{percent === null ? '—' : `${percent}%`}</strong><span>{attempt.score}/{attempt.totalPoints} оноо</span></span>{!preview && <Icon name="arrow" size={16} />}</>;

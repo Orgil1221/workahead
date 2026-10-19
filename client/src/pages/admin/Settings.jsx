@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../../context/ToastContext.jsx';
 import { WeatherIcon } from '../../components/LandingAtmosphere.jsx';
-import { useAdminApi, useAdminLoad } from './AdminContext.jsx';
+import { useAdmin, useAdminApi, useAdminLoad } from './AdminContext.jsx';
+import BadgeSettings from '../../chat/BadgeSettings.jsx';
+import '../student/Profile.css';
 import { AdminDialog, AdminEmpty, AdminError, AdminHeading, AdminIcon } from './AdminUI.jsx';
 
 const themes = [
@@ -13,7 +15,8 @@ const themes = [
 ];
 
 export default function AdminSettings() {
-  return <><AdminHeading eyebrow="САЙТЫН УДИРДЛАГА" title="Тохиргоо" description="Landing хуудасны уур амьсгал, суралцах багцуудыг нэг дор удирд." /><LandingThemeEditor /><PlanEditor /></>;
+  const { preview } = useAdmin();
+  return <><AdminHeading eyebrow="САЙТЫН УДИРДЛАГА" title="Тохиргоо" description="Landing хуудасны уур амьсгал, суралцах багцуудыг нэг дор удирд." /><LandingThemeEditor /><PlanEditor />{!preview && <BadgeSettings />}</>;
 }
 function LandingThemeEditor() {
   const api = useAdminApi();

@@ -6,6 +6,7 @@ import TabBar from './TabBar.jsx';
 import MobileHeader from './MobileHeader.jsx';
 import ThemeToggle from './ThemeToggle.jsx';
 import { useUsageTracking } from '../analytics/useUsageTracking.js';
+import ChatInviteToast from '../chat/ChatInviteToast.jsx';
 
 const tabs = [
   { to: '/student', label: 'Нүүр', icon: 'home', end: true },
@@ -40,15 +41,18 @@ export default function StudentLayout() {
     return () => { alive = false; clearInterval(t); };
   }, []);
 
+  if (pathname === '/student/chat') return <div className="student-chat-screen"><ChatInviteToast /><Outlet /></div>;
+
   return (
     <div className="app-shell">
+      <ChatInviteToast />
       <aside className="sidebar">
         <div className="brand">Work<span>·</span>Ahead</div>
         <div className="nav-section">Оюутан</div>
         <NavLink to="/student" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Нүүр</NavLink>
         <NavLink to="/student/dashboard" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Миний ахиц</NavLink>
         <NavLink to="/student/bookmarks" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Хадгалсан асуулт</NavLink>
-        <NavLink to="/student/history" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Дүнгийн түүх</NavLink>
+        <NavLink to="/student/history" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>Шалгалтын түүх</NavLink>
         <NavLink to="/student/notifications" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
           Мэдэгдэл{unread > 0 && <span className="nav-dot" title="Шинэ мэдэгдэл байна" />}
         </NavLink>
@@ -73,7 +77,7 @@ export default function StudentLayout() {
           hasUnreadNotifications={unread > 0}
           onBellClick={() => navigate('/student/notifications')}
         />
-        <main className={`content${pathname === '/student/dashboard' ? ' dashboard-content' : pathname === '/student/profile' ? ' profile-content' : pathname === '/student/payment' ? ' payment-content' : /^\/student\/(?:(?:u|p|exam|attempt)\/|(?:review|history)$)/.test(pathname) ? ' study-content' : ''}`}>
+        <main className={`content${pathname.startsWith('/student/dashboard') ? ' dashboard-content' : pathname === '/student/chat' ? ' chat-content' : pathname === '/student/profile' ? ' profile-content' : pathname === '/student/payment' ? ' payment-content' : /^\/student\/(?:(?:u|p|exam|attempt)\/|(?:review|history)$)/.test(pathname) ? ' study-content' : ''}`}>
           <div className="page-enter" key={location.pathname}>
             <Outlet />
           </div>

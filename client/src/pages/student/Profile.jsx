@@ -3,6 +3,7 @@ import { api } from '../../api/client.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import ProfileView from './ProfileView.jsx';
+import BadgeSettings from '../../chat/BadgeSettings.jsx';
 
 async function loadPrograms() {
   const response = await api('/academic-programs');
@@ -41,7 +42,7 @@ export default function Profile() {
 
   if (!user) return null;
 
-  return <ProfileView user={user} plans={plans} plansError={plansError}
+  return <ProfileView user={user} plans={plans} plansError={plansError} chatSettings={<BadgeSettings />}
     onRetryPlans={() => setRetry((value) => value + 1)} loadPrograms={loadPrograms}
     onSaveProfile={saveProfile} onChangePassword={changePassword} onLogout={logout} />;
 }

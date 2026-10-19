@@ -1,0 +1,7 @@
+.home-chat-link { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; padding: 9px 12px; border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--accent) 6%, transparent); color: var(--accent); text-decoration: none; font-size: .7rem; font-weight: 750; letter-spacing: .04em; }
+.home-chat-link:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.home-chat-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.home-courses-heading { align-items: center; flex-wrap: nowrap; }
+.home-courses-heading h2 { margin: 0; }
+.home-chat-new { display: inline-flex; align-items: center; justify-content: center; padding: 3px 5px; border-radius: 5px; background: var(--accent); color: #fff; font-size: .51rem; line-height: 1; font-weight: 800; letter-spacing: .04em; }
+@media (max-width: 374px) { .home-chat-link { gap: 5px; padding: 9px; font-size: .64rem; } }
