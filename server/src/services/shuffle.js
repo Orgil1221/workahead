@@ -26,11 +26,12 @@ export function seededShuffle(array, seed) {
 
 export function shuffleChoicesForAttempt(choices, correctChoice, attemptId, questionId) {
   if (!Array.isArray(choices) || choices.length !== 4 || !correctChoice) return { choices, correctChoice };
-  const correctText = choices.find((c) => c.key === correctChoice)?.text;
-  if (!correctText) return { choices, correctChoice };
+  // Resolve correct option by original index so duplicate option texts can't pick the wrong letter
+  const correctIndex = choices.findIndex((c) => String(c.key || '').toUpperCase() === String(correctChoice).toUpperCase());
+  if (correctIndex < 0) return { choices, correctChoice };
   const seed = hashString(String(attemptId) + String(questionId));
-  const shuffled = seededShuffle(choices, seed);
-  const newChoices = shuffled.map((c, i) => ({ key: String.fromCharCode(65 + i), text: c.text }));
-  const newCorrect = newChoices.find((c) => c.text === correctText)?.key || correctChoice;
+  const order = seededShuffle(choices.map((_, i) => i), seed);
+  const newChoices = order.map((from, i) => ({ key: String.fromCharCode(65 + i), text: choices[from].text }));
+  const newCorrect = String.fromCharCode(65 + order.indexOf(correctIndex));
   return { choices: newChoices, correctChoice: newCorrect };
 }

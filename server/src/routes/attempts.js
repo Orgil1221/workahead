@@ -74,8 +74,8 @@ router.post('/:id/answers', async (req, res, next) => {
         return res.status(400).json({ error: 'Сонголт A/B/C/D байх ёстой' });
       }
       let correct = String(question.correctChoice || '').toUpperCase();
-      // Shuffle per attempt — same seed as GET /exams?attemptId, so student's seen order matches grading
-      if (attempt.mode === 'TEST' && Array.isArray(question.choices) && question.choices.length === 4) {
+      // Shuffle per attempt in BOTH modes — same seed as GET /exams?attemptId, so student's seen order matches grading
+      if (Array.isArray(question.choices) && question.choices.length === 4) {
         const shuffled = shuffleChoicesForAttempt(question.choices, question.correctChoice, attempt.id, question.id);
         correct = String(shuffled.correctChoice || '').toUpperCase();
       }
@@ -235,13 +235,12 @@ router.get('/:id', requireAuth, async (req, res, next) => {
     });
     if (!attempt) return res.status(404).json({ error: 'Тест олдсонгүй' });
 
-    const isTestAttempt = attempt.mode === 'TEST';
-    // Shuffle choices per attempt so each student/attempt sees different order (deterministic per attemptId+questionId)
+    // Shuffle choices per attempt in BOTH modes so display matches what the student saw (deterministic per attemptId+questionId)
     const withShuffled = {
       ...attempt,
       answers: attempt.answers.map((a) => {
         let q = a.question;
-        if (isTestAttempt && Array.isArray(q.choices) && q.choices.length === 4 && q.correctChoice) {
+        if (Array.isArray(q.choices) && q.choices.length === 4 && q.correctChoice) {
           const shuffled = shuffleChoicesForAttempt(q.choices, q.correctChoice, attempt.id, q.id);
           q = { ...q, choices: shuffled.choices, correctChoice: shuffled.correctChoice };
         }
