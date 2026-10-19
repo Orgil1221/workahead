@@ -45,7 +45,7 @@ router.get('/', async (_req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   try {
-    const { email, password, name, role, programId } = req.body;
+    const { email, password, name, role, programId, academicProgramId } = req.body;
     if (!email || !password || !name)
       return res.status(400).json({ error: 'Имэйл, нууц үг, нэр шаардлагатай' });
     const exists = await prisma.user.findUnique({ where: { email } });
@@ -57,8 +57,9 @@ router.post('/', async (req, res, next) => {
         passwordHash: await bcrypt.hash(password, 10),
         role: role === 'ADMIN' ? 'ADMIN' : 'STUDENT',
         programId: programId || null,
+        academicProgramId: academicProgramId || null,
       },
-      select: { id: true, email: true, name: true, role: true, programId: true },
+      select: { id: true, email: true, name: true, role: true, programId: true, academicProgramId: true },
     });
     res.status(201).json({ user });
   } catch (e) { next(e); }

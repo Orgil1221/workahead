@@ -19,16 +19,16 @@ const samplePlans = [
   { id: 'preview-plan-2', code: 'PHYSICS1', title: 'Физик 1', priceMnt: 12900, durationDays: 30, active: true, _count: { exams: 8, transactions: 29 } },
   { id: 'preview-plan-3', code: 'ALL', title: 'Бүх хичээл', priceMnt: 24900, durationDays: 30, active: true, _count: { exams: 20, transactions: 42 } },
 ];
-const sampleUsers = [
-  { id: 'preview-admin', name: 'Админ', email: 'admin@example.test', role: 'ADMIN', program: null, subscription: null, _count: { attempts: 0, flags: 0 } },
-  { id: 'preview-user-1', name: 'Б. Тэмүүлэн', email: 'temuulen@example.test', role: 'STUDENT', program: samplePrograms[2], subscription: { title: 'Математик 1Б', isGift: false, expiresAt: new Date(Date.now() + 20 * 86400000).toISOString() }, _count: { attempts: 18, flags: 2 } },
-  { id: 'preview-user-2', name: 'Д. Номин', email: 'nomin@example.test', role: 'STUDENT', program: { id: 'preview-finance', school: 'БС', name: 'Санхүү' }, subscription: { title: 'Бүх хичээл', isGift: true, expiresAt: new Date(Date.now() + 12 * 86400000).toISOString() }, _count: { attempts: 12, flags: 1 } },
-  { id: 'preview-user-3', name: 'Э. Анужин', email: 'anujin@example.test', role: 'STUDENT', program: samplePrograms[2], subscription: null, _count: { attempts: 4, flags: 0 } },
-];
 const sampleMajors = [
   { id: 'preview-academic-1', university: 'МУИС', school: 'МТЭС', name: 'Программ хангамж', code: 'SE', order: 1 },
   { id: 'preview-academic-2', university: 'МУИС', school: 'МТЭС', name: 'Мэдээллийн систем', code: 'IS', order: 2 },
   { id: 'preview-academic-3', university: 'МУИС', school: 'БС', name: 'Санхүү', code: 'FIN', order: 3 },
+];
+const sampleUsers = [
+  { id: 'preview-admin', name: 'Админ', email: 'admin@example.test', role: 'ADMIN', academicProgram: null, subscription: null, _count: { attempts: 0, flags: 0 } },
+  { id: 'preview-user-1', name: 'Б. Тэмүүлэн', email: 'temuulen@example.test', role: 'STUDENT', academicProgram: sampleMajors[0], subscription: { title: 'Математик 1Б', isGift: false, expiresAt: new Date(Date.now() + 20 * 86400000).toISOString() }, _count: { attempts: 18, flags: 2 } },
+  { id: 'preview-user-2', name: 'Д. Номин', email: 'nomin@example.test', role: 'STUDENT', academicProgram: sampleMajors[2], subscription: { title: 'Бүх хичээл', isGift: true, expiresAt: new Date(Date.now() + 12 * 86400000).toISOString() }, _count: { attempts: 12, flags: 1 } },
+  { id: 'preview-user-3', name: 'Э. Анужин', email: 'anujin@example.test', role: 'STUDENT', academicProgram: sampleMajors[1], subscription: null, _count: { attempts: 4, flags: 0 } },
 ];
 const sampleFlags = [
   { id: 'preview-flag-1', status: 'NEW', reason: 'Бодолтын алхмыг илүү дэлгэрэнгүй тайлбарлаж өгнө үү.', createdAt: '2026-10-15T06:30:00Z', user: sampleUsers[1], question: sampleQuestions[0] },

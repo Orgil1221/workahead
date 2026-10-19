@@ -4,14 +4,10 @@ import { AdminDialog, AdminHeading, AdminIcon, AdminEmpty, AdminError } from './
 import Spinner from '../../components/Spinner.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
-// Зөвхөн баталгаат мэргэжлүүдийг (МТЭС/БС/ХЗС/ШУС/ИТС/УТСОУХНУС) жагсаалтад үлдээнэ
-const VALID_SCHOOLS = ['МТЭС', 'БС', 'ХЗС', 'ШУС', 'ИТС', 'УТСОУХНУС'];
-const majorsOf = (list) => list.filter((p) => VALID_SCHOOLS.includes(p.school));
-
 export default function AdminUsers() {
   const api = useAdminApi();
   const [users, setUsers] = useState(null);
-  const [programs, setPrograms] = useState([]);
+  const [academicPrograms, setAcademicPrograms] = useState([]);
   const [plans, setPlans] = useState([]);
   const [adding, setAdding] = useState(false);
   const [gifting, setGifting] = useState(null);
@@ -20,16 +16,13 @@ export default function AdminUsers() {
   const [role, setRole] = useState('ALL');
   const [error, setError] = useState(null);
   const toast = useToast();
-  const majorPrograms = majorsOf(programs);
 
   const load = () => { setError(null); return api('/admin/users').then((data) => setUsers(data.users)).catch(setError); };
-  const visibleUsers = (users || []).filter((user) => (role === 'ALL' || user.role === role) && [user.name, user.email, user.program?.name, user.program?.school].filter(Boolean).join(' ').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const visibleUsers = (users || []).filter((user) => (role === 'ALL' || user.role === role) && [user.name, user.email, user.academicProgram?.name, user.academicProgram?.school, user.academicProgram?.university, user.program?.name, user.program?.school].filter(Boolean).join(' ').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
 
   useEffect(() => {
     load();
-    api('/admin/catalog/universities')
-      .then((d) => setPrograms(d.universities.flatMap((u) => u.programs.map((p) => ({ ...p, university: u.name })))))
-      .catch(() => {});
+    api('/admin/academic-programs').then((d) => setAcademicPrograms(d.programs)).catch(() => {});
     api('/admin/plans').then((d) => setPlans(d.plans)).catch(() => {});
   }, []);
 
@@ -40,10 +33,10 @@ export default function AdminUsers() {
     } catch (e) { toast(e.message); }
   };
 
-  const setProgram = async (u, programId) => {
+  const setAcademicProgram = async (u, academicProgramId) => {
     try {
-      await api(`/admin/users/${u.id}`, { method: 'PUT', body: { programId } });
-      toast('Хөтөлбөр хадгаллаа'); load();
+      await api(`/admin/users/${u.id}`, { method: 'PUT', body: { academicProgramId } });
+      toast('Мэргэжил хадгаллаа'); load();
     } catch (e) { toast(e.message); }
   };
 
@@ -80,6 +73,7 @@ export default function AdminUsers() {
         <div className="card">
           {visibleUsers.map((u) => {
             const sub = u.subscription;
+            const major = u.academicProgram || u.program;
             const daysLeft = sub?.expiresAt ? Math.max(0, Math.ceil((new Date(sub.expiresAt) - new Date()) / 86400000)) : null;
             return (
               <div key={u.id} className="row-link ad-user-row">
@@ -96,17 +90,17 @@ export default function AdminUsers() {
                     {u.email} · {u._count.attempts} тест · {u._count.flags} flag
                     {sub && <span> · {sub.title} {sub.expiresAt ? `· дуусах: ${new Date(sub.expiresAt).toLocaleDateString('mn-MN')}` : ''}</span>}
                   </span>
-                  {u.program && (
+                  {major && (
                     <span className="badge blue" style={{ marginTop: 4, display: 'inline-block' }}>
-                      {u.program.school ? `${u.program.school} · ` : ''}{u.program.name}
+                      {major.school ? `${major.school} · ` : ''}{major.name}
                     </span>
                   )}
                 </div></div>
                 <span className="btn-row ad-user-actions">
-                  <select aria-label={u.name + ' — мэргэжил'} value={u.program?.id || ''} onChange={(e) => setProgram(u, e.target.value)}
+                  <select aria-label={u.name + ' — мэргэжил'} value={u.academicProgram?.id || ''} onChange={(e) => setAcademicProgram(u, e.target.value)}
                     style={{ width: 'auto', fontSize: '.78rem', padding: '4px 6px', maxWidth: 180 }}>
                     <option value="">Мэргэжилгүй</option>
-                    {majorPrograms.map((p) => <option key={p.id} value={p.id}>{p.school ? `${p.school} · ` : ''}{p.name}</option>)}
+                    {academicPrograms.map((p) => <option key={p.id} value={p.id}>{p.university && p.university !== 'МУИС' ? `${p.university} · ` : ''}{p.school ? `${p.school} · ` : ''}{p.name}</option>)}
                   </select>
                   {!sub ? (
                     <button className="btn secondary small" onClick={() => setGifting(u)}>Gift 30х</button>
@@ -128,7 +122,7 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {adding && <AddUserModal programs={programs} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
+      {adding && <AddUserModal academicPrograms={academicPrograms} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
       {gifting && <GiftModal user={gifting} plans={plans} onClose={() => setGifting(null)} onGift={gift} />}
     </>
   );
@@ -152,13 +146,12 @@ function GiftModal({ user, plans, onClose, onGift }) {
   );
 }
 
-function AddUserModal({ programs, onClose, onSaved }) {
+function AddUserModal({ academicPrograms, onClose, onSaved }) {
   const api = useAdminApi();
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'STUDENT', programId: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'STUDENT', academicProgramId: '' });
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const majorPrograms = majorsOf(programs);
 
   const save = async () => {
     setBusy(true);
@@ -179,13 +172,11 @@ function AddUserModal({ programs, onClose, onSaved }) {
         <select id="admin-users-field-5" value={form.role} onChange={set('role')}>
           <option value="STUDENT">Оюутан</option><option value="ADMIN">Админ</option>
         </select>
-        <label htmlFor="admin-users-field-6">Хөтөлбөр</label>
-        <select id="admin-users-field-6" value={form.programId} onChange={set('programId')}>
+        <label htmlFor="admin-users-field-6">Мэргэжил</label>
+        <select id="admin-users-field-6" value={form.academicProgramId} onChange={set('academicProgramId')}>
           <option value="">— Сонгохгүй —</option>
-          {majorPrograms.length > 0 ? majorPrograms.map((p) => (
-            <option key={p.id} value={p.id}>{p.university !== 'Монголын Их Сургууль' ? `${p.university} · ` : ''}{p.school ? `${p.school} · ` : ''}{p.name}</option>
-          )) : programs.map((p) => (
-            <option key={p.id} value={p.id}>{p.university} · {p.name}</option>
+          {academicPrograms.map((p) => (
+            <option key={p.id} value={p.id}>{p.university && p.university !== 'МУИС' ? `${p.university} · ` : ''}{p.school ? `${p.school} · ` : ''}{p.name}</option>
           ))}
         </select>
         <div className="btn-row" style={{ marginTop: 14, justifyContent: 'flex-end' }}>
