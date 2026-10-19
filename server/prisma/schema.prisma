@@ -156,6 +156,16 @@ model User {
   sessions      UserSession[]
   pushSubscriptions PushSubscription[]
   usageMinutes UsageMinute[]
+  chatProfile ChatProfile?
+  chatMessages ChatMessage[]
+  chatMemberships ChatMember[]
+  chatSentInvites ChatInvite[] @relation("ChatInviter")
+  chatReceivedInvites ChatInvite[] @relation("ChatInvitee")
+  chatBlocks ChatBlock[] @relation("ChatBlocker")
+  chatBlockedBy ChatBlock[] @relation("ChatBlocked")
+  chatSaved ChatSavedMessage[]
+  chatHearts ChatHeart[]
+  chatReports ChatReport[]
 
   @@index([role])
 }
@@ -334,4 +344,119 @@ model UsageMinute {
 
   @@id([userId, minuteAt])
   @@index([minuteAt])
+}
+
+model ChatProfile {
+  userId String @id
+  hasVisited Boolean @default(false)
+  selectedBadge String?
+  badgeColor String @default("orange")
+  allowInvites Boolean @default(true)
+  muted Boolean @default(false)
+  timeoutUntil DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatRoom {
+  id String @id @default(cuid())
+  kind String @default("DIRECT")
+  pairKey String? @unique
+  createdAt DateTime @default(now())
+  pinnedMessageId String? @unique
+  pinnedMessage ChatMessage? @relation("ChatPinnedMessage", fields: [pinnedMessageId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+  members ChatMember[]
+  invite ChatInvite?
+}
+
+model ChatMember {
+  roomId String
+  userId String
+  readAt DateTime @default(now())
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([roomId, userId])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id String @id @default(cuid())
+  roomId String
+  userId String
+  clientId String
+  body String
+  mentions Json @default("[]")
+  system Json?
+  replyToId String?
+  replyTo ChatMessage? @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies ChatMessage[] @relation("ChatReplies")
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  saved ChatSavedMessage[]
+  hearts ChatHeart[]
+  reports ChatReport[]
+  pinnedInRoom ChatRoom? @relation("ChatPinnedMessage")
+  @@unique([userId, clientId])
+  @@index([roomId, createdAt, id])
+  @@index([replyToId])
+}
+
+model ChatHeart {
+  userId String
+  messageId String
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  @@id([userId, messageId])
+  @@index([messageId])
+}
+
+model ChatInvite {
+  id String @id @default(cuid())
+  senderId String
+  recipientId String
+  pairKey String @unique
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  roomId String? @unique
+  sender User @relation("ChatInviter", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("ChatInvitee", fields: [recipientId], references: [id], onDelete: Cascade)
+  room ChatRoom? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  @@index([recipientId, status])
+  @@index([senderId, createdAt])
+}
+
+model ChatBlock {
+  userId String
+  blockedId String
+  createdAt DateTime @default(now())
+  user User @relation("ChatBlocker", fields: [userId], references: [id], onDelete: Cascade)
+  blocked User @relation("ChatBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  @@id([userId, blockedId])
+  @@index([blockedId])
+}
+
+model ChatSavedMessage {
+  userId String
+  messageId String
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  @@id([userId, messageId])
+}
+
+model ChatReport {
+  id String @id @default(cuid())
+  userId String
+  messageId String
+  reason String
+  resolved Boolean @default(false)
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  @@unique([userId, messageId])
+  @@index([resolved, createdAt])
 }

@@ -15,6 +15,7 @@ import notificationRoutes from './routes/notifications.js';
 import paymentRoutes from './routes/payments.js';
 import pushRoutes from './routes/push.js';
 import usageRoutes from './routes/usage.js';
+import chatRoutes from './routes/chat.js';
 import adminUsageRoutes from './routes/admin/usage.js';
 import adminCatalogRoutes from './routes/admin/catalog.js';
 import adminStatsRoutes from './routes/admin/stats.js';
@@ -43,7 +44,7 @@ app.use(express.json({
 
 // Health before rate limit — keep-alive 01-06 sleep ping буюу UptimeRobot-д зориулсан хөнгөн endpoint
 // monitor.yml (GitHub) + UptimeRobot хоёулаа эндээс шалгана
-app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: process.uptime(), time: new Date().toISOString() }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: process.uptime(), time: new Date().toISOString(), ...(process.env.NODE_ENV !== 'production' && process.env.CHAT_LOCAL_DEMO === '1' ? { localChatDemo: true } : {}) }));
 app.get('/api/ping', (_req, res) => res.json({ ok: true }));
 
 // General rate limit — 200 req/min per IP (keep-alive exempt inside middleware)
@@ -92,6 +93,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/usage', usageRoutes);
+app.use('/api/chat', chatRoutes);
 app.use('/api/admin/usage', adminUsageRoutes);
 app.use('/api/admin/catalog', adminCatalogRoutes);
 app.use('/api/admin/stats', adminStatsRoutes);
@@ -107,7 +109,7 @@ app.use((err, _req, res, _next) => {
 });
 
 const port = process.env.PORT || 4000;
-app.listen(port, () => {
+app.listen(port, process.env.HOST || '0.0.0.0', () => {
   console.log(`Work Ahead API → http://localhost:${port}`);
   Promise.all([import('./services/usage.js'), import('./db.js')]).then(([usage, database]) => {
     const cleanup = () => usage.pruneUsage(database.default).catch((error) => console.error('Usage retention:', error.message));

@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE "ChatProfile" ADD COLUMN "timeoutUntil" TIMESTAMP(3);
+ALTER TABLE "ChatMessage" ADD COLUMN "system" JSONB;
+
+COMMIT;

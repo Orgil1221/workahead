@@ -18,6 +18,11 @@ function createLimiter({ points, duration, keyPrefix }) {
 }
 
 const limiters = {
+  chatMessage: createLimiter({ points: 20, duration: 60, keyPrefix: 'rl_chat_message' }),
+  chatReaction: createLimiter({ points: 60, duration: 60, keyPrefix: 'rl_chat_reaction' }),
+  chatTyping: createLimiter({ points: 40, duration: 60, keyPrefix: 'rl_chat_typing' }),
+  chatInvite: createLimiter({ points: 10, duration: 60 * 60, keyPrefix: 'rl_chat_invite' }),
+  chatReport: createLimiter({ points: 10, duration: 60 * 60, keyPrefix: 'rl_chat_report' }),
   usage: createLimiter({ points: 20, duration: 60, keyPrefix: 'rl_usage' }),
   auth: createLimiter({ points: 20, duration: 10 * 60, keyPrefix: 'rl_auth' }), // 20 per 10 min per IP (был 5/15мин — 727с түгжээ суллах)
   checkout: createLimiter({ points: 20, duration: 60 * 60, keyPrefix: 'rl_checkout' }), // 20 per hour per user
