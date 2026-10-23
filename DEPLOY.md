@@ -56,7 +56,7 @@
 1. **Vercel → Domains:** `workahead.me` + `www.workahead.me` нэм → заасан DNS-ийг Namecheap-д хуулах (доорх 3.5-г үз)
 2. **Namecheap → Advanced DNS:** `Type A | Host @ | Value 76.76.21.21` + `CNAME | Host www | Value cname.vercel-dns.com` (Vercel-ээс өгсөн утга баталгаажуулах). 5-10 мин хүлээ.
 3. Render → `PUBLIC_BASE_URL=https://workahead.me` + `CORS_ORIGIN=https://workahead.me,https://www.workahead.me` → **Save** (авто redeploy)
-4. **UptimeRobot** (https://uptimerobot.com, үнэгүй): Add New Monitor → HTTP(s) → Render-ийн `/api/health` URL → 5 мин интервал — сервис унтахгүй байлгана
+4. **UptimeRobot** (https://uptimerobot.com, үнэгүй): Add New Monitor → HTTP(s) → Render-ийн `/api/health` URL → **30-60 мин** интервал (5 мин байвал Render байнга сэрээтэй, Neon compute-ийн лимит хурдан дуусна). Аль эсвэл зөвхөн Vercel frontend-ийг мониторло.
 5. Bonum webhook (тест болвол): тэдгээрийн dashboard дээр callback URL → `https://work-ahead-api.onrender.com/api/payments/webhook` (домэйн сольсон ч webhook Render API дээр хэвээр)
 
 ## 5️⃣ Шалгах жагсаалт
