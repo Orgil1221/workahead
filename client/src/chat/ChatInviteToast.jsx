@@ -63,7 +63,7 @@ export default function ChatInviteToast() {
     window.addEventListener('wa:chat-invite-sent', onSent);
     refresh();
     const stop = connectChat((event) => { if (event.type === 'refresh' || event.type === 'connected') refresh(event); }, () => {});
-    const timer = setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 120000);
+    const timer = setInterval(refresh, 12000);
     const onFocus = () => { if (document.visibilityState === 'visible') refresh(); };
     document.addEventListener('visibilitychange', onFocus);
     return () => { alive = false; stop(); clearInterval(timer); document.removeEventListener('visibilitychange', onFocus); window.removeEventListener('wa:chat-invite-sent', onSent); };

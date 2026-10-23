@@ -28,7 +28,6 @@ export default function Chat() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [connection, setConnection] = useState('connecting');
-  const connectionRef = useRef('connecting');
   const [typing, setTyping] = useState({});
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState(null);
@@ -196,10 +195,8 @@ export default function Chat() {
       if (event.type === 'typing' && event.roomId === roomId) setTyping((current) => ({ ...current, [event.userId]: { until: event.active ? Date.now() + 4500 : 0 } }));
       if (event.type === 'reaction' && event.roomId === roomId && loadedMessageIds.current.has(event.messageId)) refreshHeart(event.messageId).catch(() => {});
       if (event.type === 'connected' || event.type === 'refresh' || event.type === 'deleted') refresh();
-    }, (status) => { connectionRef.current = status; setConnection(status); });
-    const reconcile = setInterval(() => {
-      if (document.visibilityState === 'visible' && connectionRef.current !== 'live') refresh();
-    }, 60000);
+    }, setConnection);
+    const reconcile = setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 20000);
     const prune = setInterval(() => setTyping((current) => Object.fromEntries(Object.entries(current).filter(([, person]) => person.until > Date.now()))), 1000);
     const onFocus = () => { if (document.visibilityState === 'visible') refresh(); };
     document.addEventListener('visibilitychange', onFocus);

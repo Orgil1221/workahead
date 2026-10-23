@@ -119,8 +119,7 @@ app.listen(port, process.env.HOST || '0.0.0.0', () => {
   // Expire stale PENDING every 5 min — prevents DoS via PENDING flood (C3)
   import('./jobs/expirePending.js').then(({ expireStalePending }) => {
     const ttl = Number(process.env.PENDING_TTL_MINUTES || 15);
-    const sweep = Number(process.env.PENDING_SWEEP_MINUTES || 30);
-    setInterval(() => expireStalePending(ttl), sweep * 60 * 1000);
+    setInterval(() => expireStalePending(ttl), 5 * 60 * 1000);
     // Run once on startup after 30s
     setTimeout(() => expireStalePending(ttl), 30_000);
   }).catch(() => {});

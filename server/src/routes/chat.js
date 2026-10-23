@@ -460,10 +460,12 @@ router.get('/events', run(async (req, res) => {
   const close = () => { if (closed) return; closed = true; unsubscribe(); clearInterval(heartbeat); clearTimeout(expiry); res.end(); };
   const send = (event) => { if (!closed && !res.write(`data: ${JSON.stringify(event)}\n\n`)) close(); };
   unsubscribe = subscribeChat(req.user.id, send, close);
-  // Keep-alive frame only; no DB query per tick. The stream is re-authenticated
-  // when it expires after 5 minutes and the client reconnects.
-  heartbeat = setInterval(() => {
-    if (!closed) res.write(': heartbeat\n\n');
+  heartbeat = setInterval(async () => {
+    try {
+      const session = await prisma.userSession.findUnique({ where: { jti: req.jti } });
+      if (!session || session.expiresAt <= new Date()) return close();
+      res.write(': heartbeat\n\n');
+    } catch { close(); }
   }, 15000);
   expiry = setTimeout(close, 5 * 60 * 1000);
   res.on('close', close);
