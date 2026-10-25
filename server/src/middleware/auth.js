@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../db.js';
+import { adminSessionIsValid } from '../services/adminMfa.js';
 
 export async function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -8,7 +9,7 @@ export async function requireAuth(req, res, next) {
   const token = bearer || cookieToken;
   if (!token) return res.status(401).json({ error: 'Нэвтрэх шаардлагатай' });
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     // Хуучин token (jti-гүй) — шинэ session системд дахин нэвтрэх шаардлагатай
     if (!payload.jti) {
       return res.status(401).json({ error: 'Session шинэчлэгдсэн — дахин нэвтэрнэ үү', code: 'SESSION_EXPIRED' });
@@ -34,7 +35,10 @@ export async function requireAuth(req, res, next) {
         academicProgram: { select: { id: true, name: true, school: true, code: true, university: true } },
       },
     });
-    if (!user) return res.status(401).json({ error: 'Хэрэглэгч олдсонгүй' });
+    if (!user || !user.isActive) return res.status(401).json({ error: 'Хэрэглэгч олдсонгүй эсвэл идэвхгүй байна' });
+    if (user.role === 'ADMIN' && !(await adminSessionIsValid(prisma, user, payload.adminDeviceId))) {
+      return res.status(401).json({ error: 'Админы баталгаажуулалт шаардлагатай — дахин нэвтэрнэ үү', code: 'ADMIN_MFA_REQUIRED' });
+    }
     req.user = user;
     req.jti = String(payload.jti);
     req.deviceType = sess.deviceType;

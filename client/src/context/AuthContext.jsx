@@ -1,14 +1,15 @@
 import { createContext, useContext, useState } from 'react';
+import { api } from '../api/client.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  try { localStorage.removeItem('wa_token'); } catch {}
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('wa_user')); } catch { return null; }
   });
 
-  const login = (token, u) => {
-    if (token) localStorage.setItem('wa_token', token);
+  const login = (u) => {
     localStorage.setItem('wa_user', JSON.stringify(u));
     setUser(u);
   };
@@ -18,15 +19,7 @@ export function AuthProvider({ children }) {
   };
   const logout = async () => {
     try {
-      const token = localStorage.getItem('wa_token');
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'x-csrf-token': localStorage.getItem('wa_csrf') || '',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
+      await api('/auth/logout', { method: 'POST' });
     } catch {}
     localStorage.removeItem('wa_token');
     localStorage.removeItem('wa_user');

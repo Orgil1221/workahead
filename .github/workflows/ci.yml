@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, 'security/**']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: workahead_security_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d workahead_security_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+      - name: Install and audit server
+        working-directory: server
+        run: npm ci && npm audit --audit-level=high
+      - name: Generate Prisma client
+        working-directory: server
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/workahead_security_test
+        run: npx prisma generate
+      - name: Validate Prisma schema
+        working-directory: server
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/workahead_security_test
+        run: npx prisma validate
+      - name: Server tests
+        working-directory: server
+        env:
+          TEST_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/workahead_security_test?connection_limit=5
+        run: npm test
+      - name: Install and audit client
+        working-directory: client
+        run: npm ci && npm audit --audit-level=high
+      - name: Build client
+        working-directory: client
+        run: npm run build

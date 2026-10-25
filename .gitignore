@@ -22,3 +22,5 @@ Thumbs.db
 # Poster build fonts (re-download via script header URLs)
 poster/fonts/
 
+.vercel
+.env*

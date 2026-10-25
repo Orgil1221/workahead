@@ -127,9 +127,50 @@ model Question {
 model EmailOtp {
   id        String   @id @default(cuid())
   email     String   @unique
-  otp       String
+  otp       String?
+  otpHash   String?
+  attempts  Int      @default(0)
   expires   DateTime
   createdAt DateTime @default(now())
+}
+
+model AdminLoginOtp {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  otpHash   String
+  attempts  Int      @default(0)
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
+// Legacy AdminLoginOtp/adminMfaVerifiedAt are retained for additive rollout only.
+// New login challenges and trust are bound to unguessable browser cookies.
+model AdminAuthChallenge {
+  tokenHash      String   @id
+  userId         String
+  otpHash        String
+  credentialHash String
+  attempts       Int      @default(0)
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model AdminTrustedDevice {
+  id             String   @id @default(cuid())
+  tokenHash      String   @unique
+  userId         String
+  credentialHash String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model User {
@@ -142,7 +183,11 @@ model User {
   programId           String?
   academicProgramId   String?
   isVerified          Boolean   @default(false)
+  isActive            Boolean   @default(true)
+  adminMfaVerifiedAt  DateTime?
   verifyOtp           String?
+  verifyOtpHash       String?
+  verifyOtpAttempts   Int       @default(0)
   verifyExpires       DateTime?
   createdAt           DateTime  @default(now())
 
@@ -154,6 +199,8 @@ model User {
   notifications Notification[]
   payments      PaymentTransaction[]
   sessions      UserSession[]
+  adminChallenges AdminAuthChallenge[]
+  adminDevices    AdminTrustedDevice[]
   pushSubscriptions PushSubscription[]
   usageMinutes UsageMinute[]
   chatProfile ChatProfile?
@@ -168,6 +215,19 @@ model User {
   chatReports ChatReport[]
 
   @@index([role])
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  method     String
+  statusCode Int
+  ipHash     String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([adminId, createdAt])
 }
 
 model Flag {

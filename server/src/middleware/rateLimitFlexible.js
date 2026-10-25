@@ -1,5 +1,6 @@
 import { RateLimiterMemory, RateLimiterRedis } from 'rate-limiter-flexible';
 import Redis from 'ioredis';
+import crypto from 'node:crypto';
 
 let redisClient = null;
 if (process.env.REDIS_URL) {
@@ -25,6 +26,7 @@ const limiters = {
   chatReport: createLimiter({ points: 10, duration: 60 * 60, keyPrefix: 'rl_chat_report' }),
   usage: createLimiter({ points: 20, duration: 60, keyPrefix: 'rl_usage' }),
   auth: createLimiter({ points: 20, duration: 10 * 60, keyPrefix: 'rl_auth' }), // 20 per 10 min per IP (был 5/15мин — 727с түгжээ суллах)
+  loginAccount: createLimiter({ points: 10, duration: 15 * 60, keyPrefix: 'rl_login_account' }),
   checkout: createLimiter({ points: 20, duration: 60 * 60, keyPrefix: 'rl_checkout' }), // 20 per hour per user
   general: createLimiter({ points: 200, duration: 60, keyPrefix: 'rl_general' }), // 200 per min per IP
 };
@@ -39,12 +41,13 @@ export function rateLimitFlexible(type = 'general') {
         return next();
       }
     }
-    // Health/ping keep-alive exempt — prevents 750h ping from hitting limiter
-    if (req.path === '/api/health' || req.path === '/health' || req.headers['user-agent']?.includes('keep-alive')) {
-      return next();
-    }
+    // Health/ping are mounted before the limiter. Never trust request headers
+    // or route suffixes to exempt an authentication request.
     const limiter = limiters[type] || limiters.general;
-    const key = req.user?.id || req.ip;
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const key = type === 'loginAccount'
+      ? crypto.createHash('sha256').update(email).digest('hex')
+      : req.user?.id || req.ip;
     try {
       await limiter.consume(key);
       next();

@@ -7,6 +7,8 @@ import { useToast } from '../../context/ToastContext.jsx';
 export default function AdminUsers() {
   const api = useAdminApi();
   const [users, setUsers] = useState(null);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [academicPrograms, setAcademicPrograms] = useState([]);
   const [plans, setPlans] = useState([]);
   const [adding, setAdding] = useState(false);
@@ -17,7 +19,17 @@ export default function AdminUsers() {
   const [error, setError] = useState(null);
   const toast = useToast();
 
-  const load = () => { setError(null); return api('/admin/users').then((data) => setUsers(data.users)).catch(setError); };
+  const load = () => { setError(null); setNextCursor(null); return api('/admin/users').then((data) => { setUsers(data.users); setNextCursor(data.nextCursor); }).catch(setError); };
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const data = await api('/admin/users?cursor=' + encodeURIComponent(nextCursor));
+      setUsers((current) => [...(current || []), ...data.users]);
+      setNextCursor(data.nextCursor);
+    } catch (loadError) { setError(loadError); }
+    finally { setLoadingMore(false); }
+  };
   const visibleUsers = (users || []).filter((user) => (role === 'ALL' || user.role === role) && [user.name, user.email, user.academicProgram?.name, user.academicProgram?.school, user.academicProgram?.university, user.program?.name, user.program?.school].filter(Boolean).join(' ').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
 
   useEffect(() => {
@@ -41,8 +53,16 @@ export default function AdminUsers() {
   };
 
   const del = (u) => {
-    if (!confirm(`${u.name} устгах уу?`)) return;
-    api(`/admin/users/${u.id}`, { method: 'DELETE' }).then(() => { toast('Устгалаа'); load(); }).catch((e) => toast(e.message));
+    if (!confirm(`${u.name} хэрэглэгчийн бүртгэлийг идэвхгүй болгох уу? Өгөгдөл хадгалагдана.`)) return;
+    api(`/admin/users/${u.id}`, { method: 'DELETE' }).then(() => { toast('Бүртгэлийг идэвхгүй болголоо'); load(); }).catch((e) => toast(e.message));
+  };
+
+  const toggleActive = async (u) => {
+    try {
+      await api(`/admin/users/${u.id}`, { method: 'PUT', body: { isActive: !u.isActive } });
+      toast(u.isActive ? 'Бүртгэл идэвхгүй боллоо' : 'Бүртгэл сэргээгдлээ');
+      load();
+    } catch (e) { toast(e.message); }
   };
 
   const gift = async (userId, planId) => {
@@ -78,7 +98,7 @@ export default function AdminUsers() {
             return (
               <div key={u.id} className="row-link ad-user-row">
                 <div className="ad-user-info"><span className="ad-avatar">{u.name.slice(0, 1)}</span><div>
-                  <strong>{u.name}</strong>{u.id === me?.id && <span className="badge blue" style={{ marginLeft: 6 }}>ТА</span>}
+                  <strong>{u.name}</strong>{u.id === me?.id && <span className="badge blue" style={{ marginLeft: 6 }}>ТА</span>}{!u.isActive && <span className="badge" style={{ marginLeft: 6 }}>Идэвхгүй</span>}
                   {sub ? (
                     <span className={`badge ${sub.isGift ? 'blue' : 'ok'}`} style={{ marginLeft: 6 }}>
                       {sub.isGift ? `Gift • ${daysLeft !== null ? daysLeft + ' хоног' : ''}` : `Төлбөрт • ${daysLeft !== null ? daysLeft + ' хоног' : ''}`}
@@ -113,7 +133,7 @@ export default function AdminUsers() {
                     {u.role === 'ADMIN' ? 'Админ' : 'Оюутан'}
                   </button>
                   {u.id !== me?.id && (
-                    <button className="btn ghost-danger small" onClick={() => del(u)}>Устгах</button>
+                    u.isActive ? <button className="btn ghost-danger small" onClick={() => del(u)}>Идэвхгүй болгох</button> : <button className="btn secondary small" onClick={() => toggleActive(u)}>Сэргээх</button>
                   )}
                 </span>
               </div>
@@ -121,6 +141,8 @@ export default function AdminUsers() {
           })}
         </div>
       )}
+
+      {nextCursor && <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0 24px' }}><button className="btn secondary" onClick={loadMore} disabled={loadingMore}>{loadingMore ? 'Ачаалж байна…' : 'Дараагийн 50 хэрэглэгч'}</button></div>}
 
       {adding && <AddUserModal academicPrograms={academicPrograms} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
       {gifting && <GiftModal user={gifting} plans={plans} onClose={() => setGifting(null)} onGift={gift} />}

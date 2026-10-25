@@ -28,7 +28,7 @@ export default function StudyResult({ attemptId, initialAttempt, gradingNotice }
     <p className="sl-note">Илгээсэн хариултуудыг харуулж байна. Хариулаагүй бодлого нийт оноонд багтана, авах оноо нь 0.</p>
     <div className="sl-result-list">{filtered.map((answer) => {
       const question = answer.question;
-      const choiceQuestion = question.type === 'test' || (isTest && question.choices?.length === 4);
+      const choiceQuestion = question.type === 'test' || (isTest && question.choices?.length >= 2 && question.choices?.length <= 4);
       const givenChoice = question.choices?.find((choice) => choice.key === answer.givenAnswer?.trim().toUpperCase());
       const correctChoice = question.choices?.find((choice) => choice.key === question.correctChoice);
       return <details className="sl-card sl-answer-review" key={answer.id || question.id}><summary><span className={'sl-chip ' + (answer.isCorrect ? 'sl-chip-green' : 'sl-chip-red')}>{question.order}. {answer.isCorrect ? 'Зөв' : 'Давтах'}</span><div className="sl-math"><MathText text={question.prompt} /></div><span className="sl-answer-score">{answer.pointsEarned}/{question.points} оноо <span aria-hidden="true">⌄</span></span></summary><div className="sl-answer-detail"><div><h3>Таны хариулт</h3><div className="sl-math"><MathText text={choiceQuestion ? givenChoice ? givenChoice.key + '. ' + givenChoice.text : answer.givenAnswer || 'Хариулаагүй' : answer.givenAnswer ? answer.givenAnswer.includes('$') ? answer.givenAnswer : '$' + answer.givenAnswer + '$' : 'Хариулаагүй'} /></div></div>

@@ -1,10 +1,9 @@
 let sharedConnection = null;
 
 export function connectChat(onEvent, onStatus = () => {}) {
-  const token = localStorage.getItem('wa_token');
-  if (!sharedConnection || sharedConnection.token !== token) {
+  if (!sharedConnection) {
     sharedConnection?.stop();
-    const connection = { token, listeners: new Set(), status: 'connecting', stop: null };
+    const connection = { listeners: new Set(), status: 'connecting', stop: null };
     sharedConnection = connection;
     connection.stop = openChatStream((event) => {
       for (const listener of connection.listeners) {
@@ -42,8 +41,7 @@ function openChatStream(onEvent, onStatus) {
     onStatus('connecting');
     touch();
     try {
-      const token = localStorage.getItem('wa_token');
-      const response = await fetch('/api/chat/events', { credentials: 'include', headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: controller.signal });
+      const response = await fetch('/api/chat/events', { credentials: 'include', signal: controller.signal });
       if (!response.ok || !response.body) throw new Error('Stream unavailable');
       const reader = response.body.getReader();
       const decoder = new TextDecoder();

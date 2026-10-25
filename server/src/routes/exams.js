@@ -5,6 +5,7 @@ import { userHasExamAccess, paymentRequired } from '../services/access.js';
 import { shuffleChoicesForAttempt } from '../services/shuffle.js';
 
 const router = Router();
+const hasChoiceSet = (choices) => Array.isArray(choices) && choices.length >= 2 && choices.length <= 4;
 
 // Exam detail — questions without solutions (answers revealed only after attempt finishes)
 router.get('/:id', requireAuth, async (req, res, next) => {
@@ -49,7 +50,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
       exam: {
         ...exam,
         questions: exam.questions.map((q) => {
-          let choices = q.choices && Array.isArray(q.choices) && q.choices.length === 4 ? q.choices : undefined;
+          let choices = hasChoiceSet(q.choices) ? q.choices : undefined;
           // Per-attempt random: shuffle choices deterministically so each attempt has different positions
           if (choices && attemptForShuffle) {
             const shuffled = shuffleChoicesForAttempt(choices, q.correctChoice, attemptForShuffle.id, q.id);

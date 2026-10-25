@@ -81,7 +81,7 @@ export default function Register() {
         ? { name: pending.name, email: pending.email, password: pending.password, school: pending.school, customProgram: pending.customProgram, otp: otp.trim() }
         : { name: pending.name, email: pending.email, password: pending.password, programId: pending.programId || undefined, otp: otp.trim() };
       const data = await api('/auth/register', { method: 'POST', body });
-      login(data.token, data.user);
+      login(data.user);
       navigate('/student');
     } catch (err) { setError(err.message); } finally { setOtpBusy(false); }
   };

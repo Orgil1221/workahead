@@ -13,7 +13,7 @@ full: powershell -File ./start-dev.ps1
 ```
 
 ## Conventions
-- `choices` 4 `A-D` + `correctChoice` if `type=test`; else `needsReview` `importService.js:20`
+- imported `type=test` choices: 2–4 distinct `A-D` keys + matching `correctChoice`; `MathText.jsx` accepts allowlisted base64 image data URIs
 - `transactionId wa-{8hex}` `payments.js:83`
 - `x-csrf-token` from `GET /api/auth/csrf` `client/src/api/client.js:76`
 - `LaTeX $...$` only, `exam_id` idempotent

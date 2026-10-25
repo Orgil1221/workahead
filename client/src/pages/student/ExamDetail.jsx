@@ -15,7 +15,7 @@ export default function ExamDetail() {
   const starting = useRef(false);
   const exam = data?.exam;
   const questions = exam?.questions || [];
-  const hasTest = questions.some((question) => question.type === 'test' || question.choices?.length === 4);
+  const hasTest = questions.some((question) => question.type === 'test' || (question.choices?.length >= 2 && question.choices?.length <= 4));
   async function start() {
     if (starting.current) return;
     starting.current = true;

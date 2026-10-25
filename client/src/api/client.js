@@ -42,9 +42,7 @@ async function fetchCsrfToken() {
   // retry csrf fetch with short timeout — don't block POST forever
   for (let i = 0; i <= 1; i++) {
     try {
-      const token = localStorage.getItem('wa_token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const r = await fetchWithTimeout(BASE + '/auth/csrf', { credentials: 'include', headers }, 8000);
+      const r = await fetchWithTimeout(BASE + '/auth/csrf', { credentials: 'include' }, 8000);
       const d = await r.json().catch(() => ({}));
       if (d.csrfToken) {
         csrfToken = d.csrfToken;
@@ -84,11 +82,9 @@ export async function api(path, { method = 'GET', body, formData } = {}) {
   for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
     try {
       const headers = {};
-      const token = localStorage.getItem('wa_token');
-      if (token) headers.Authorization = `Bearer ${token}`;
       headers['X-Device-Type'] = getDeviceType();
       if (body) headers['Content-Type'] = 'application/json';
-      // CSRF for state-changing requests (login/register excluded server-side)
+      // CSRF for every state-changing browser request, including login/logout.
       if (method !== 'GET' && method !== 'HEAD') {
         const csrf = await getCsrfToken();
         if (csrf) headers['x-csrf-token'] = csrf;
@@ -164,8 +160,9 @@ export async function api(path, { method = 'GET', body, formData } = {}) {
       const isNetwork = e.message === 'Failed to fetch' || isAbort;
       const retryable = e.retryable || isAbort || isNetwork;
       const isIdempotent = method === 'GET' || method === 'HEAD';
-      // retry GET always, POST only on network/timeout/5xx (not 4xx)
-      const shouldRetry = attempt < RETRY_COUNT && (retryable || (isIdempotent && !e.message.includes('Нэвтрэх')));
+      // Mutations are never retried automatically: the server may have completed
+      // them even when the client lost the response. Retry only safe reads.
+      const shouldRetry = attempt < RETRY_COUNT && isIdempotent && (retryable || !e.message.includes('Нэвтрэх'));
       if (shouldRetry) {
         // exponential backoff: 700ms, 1400ms
         await sleep(700 * (attempt + 1) + Math.random() * 300);

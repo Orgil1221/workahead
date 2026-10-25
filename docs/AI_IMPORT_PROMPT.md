@@ -50,7 +50,7 @@ SCHEMA (нэр яг энэ, нэмэлт key бүү нэм):
 3. `points` 1-5, нийлбэр 60-100.
 4. `topic/tags/level` бөглө — статистик `progress/topics` ашиглана.
 5. `exam_id` давтагдашгүй — дахин импортлоход хуучин асуултууд УСТНА (cascade).
-6. `choices` яг 4 + `correct_choice` A-D — `importService.js:20` хатуу шалгана.
+6. AI-аар шинээр үүсгэх тестэд `choices` 4 байлга. Импортын үйлчилгээ эх материалаас ирсэн 2–4 сонголтыг зөв хариултын түлхүүртэй нь хүлээн авна (`importService.js`).
 7. `answer` (Задгай) болон `correct_choice` (Тест) 2-уулаа зөв байх — 2 горим тусдаа дүгнэнэ: Задгай `normalizeAnswer` яг таарах + AI, Тест `given===shuffledCorrect` `AUTO`.
 8. JSON-д comment, trailing comma байж болохгүй. `year/points` number.
 

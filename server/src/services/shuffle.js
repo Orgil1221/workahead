@@ -25,7 +25,7 @@ export function seededShuffle(array, seed) {
 }
 
 export function shuffleChoicesForAttempt(choices, correctChoice, attemptId, questionId) {
-  if (!Array.isArray(choices) || choices.length !== 4 || !correctChoice) return { choices, correctChoice };
+  if (!Array.isArray(choices) || choices.length < 2 || choices.length > 4 || !correctChoice) return { choices, correctChoice };
   // Resolve correct option by original index so duplicate option texts can't pick the wrong letter
   const correctIndex = choices.findIndex((c) => String(c.key || '').toUpperCase() === String(correctChoice).toUpperCase());
   if (correctIndex < 0) return { choices, correctChoice };

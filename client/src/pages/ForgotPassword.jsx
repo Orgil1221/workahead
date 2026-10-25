@@ -34,7 +34,7 @@ export default function ForgotPassword() {
       await api('/auth/forgot-password', { method: 'POST', body: { email: email.trim() } });
       setStep(2);
       setCooldown(60);
-      setInfo('6 оронтой код мэйл хаяг руу илгээгдлээ (10 минут хүчинтэй). Спам хавтсаа шалгана уу.');
+      setInfo('Хэрэв бүртгэл байгаа бол 6 оронтой код илгээгдлээ. Админ хэрэглэгч бол L.monhorgil2007@gmail.com хаягаа шалгана уу.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -50,8 +50,8 @@ export default function ForgotPassword() {
       setError('6 оронтой OTP кодоо оруулна уу');
       return;
     }
-    if (newPassword.length < 8) {
-      setError('Шинэ нууц үг хамгийн багадаа 8 тэмдэгт');
+    if (newPassword.length < 12) {
+      setError('Шинэ нууц үг хамгийн багадаа 12 тэмдэгт');
       return;
     }
     if (newPassword !== confirm) {
@@ -104,7 +104,7 @@ export default function ForgotPassword() {
         ) : (
           <form className="card" onSubmit={reset}>
             <p className="small muted" style={{ marginTop: 0 }}>
-              <strong>{email}</strong> хаягт код илгээлээ. Кодоо оруулж шинэ нууц үгээ үүсгэнэ үү.
+              <strong>{email}</strong> бүртгэлд зориулсан кодоо оруулж шинэ нууц үгээ үүсгэнэ үү. Админ код зөвхөн L.monhorgil2007@gmail.com хаягт ирнэ.
             </p>
             <label>OTP код</label>
             <OtpInput value={otp} onChange={setOtp} disabled={busy} />
@@ -113,17 +113,17 @@ export default function ForgotPassword() {
               id="fp-new"
               type="password"
               required
-              minLength={8}
+              minLength={12}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Хамгийн багадаа 8 тэмдэгт"
+              placeholder="Хамгийн багадаа 12 тэмдэгт"
             />
             <label htmlFor="fp-confirm">Шинэ нууц үг (давтах)</label>
             <input
               id="fp-confirm"
               type="password"
               required
-              minLength={8}
+              minLength={12}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
             />

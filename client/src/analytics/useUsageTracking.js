@@ -11,8 +11,7 @@ export function useUsageTracking(userId, enabled) {
     let csrf = null;
     let clock = null;
     let pending = [];
-    const token = localStorage.getItem('wa_token');
-    const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) };
+    const headers = { 'Content-Type': 'application/json' };
     const foreground = () => document.visibilityState === 'visible' && document.hasFocus();
     async function request(path, options = {}) {
       const controller = new AbortController();

@@ -13,12 +13,11 @@ export function getDeviceType(req) {
 // Нэвтрэх бүрд дуудна — тухайн төрлийн хуучин session-ийг kick хийж шинээр үүсгэнэ.
 // Ингэснээр 1 хэрэглэгч хамгийн ихдээ 1 DESKTOP + 1 MOBILE session-той.
 // upsert ашиглана — зэрэг 2 login давхцсан ч race үүсэхгүй.
-export async function createSession(userId, req, jti) {
+export async function createSession(userId, req, jti, sessionExpiresAt) {
   const deviceType = getDeviceType(req);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000); // JWT 7d-тэй адил
+  const expiresAt = sessionExpiresAt || new Date(Date.now() + 7 * 24 * 3600 * 1000);
   const userAgent = String(req.headers?.['user-agent'] || '').slice(0, 300) || null;
-  const fwd = String(req.headers?.['x-forwarded-for'] || '').split(',')[0]?.trim();
-  const ip = String(fwd || req.ip || '').slice(0, 60) || null;
+  const ip = String(req.ip || '').slice(0, 60) || null;
   // Хугацаа дууссан session-уудээ цэвэрлэ (opportunistic)
   prisma.userSession.deleteMany({ where: { expiresAt: { lt: new Date() } } }).catch(() => {});
   await prisma.userSession.upsert({

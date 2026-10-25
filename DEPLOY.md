@@ -27,6 +27,7 @@
 | `DATABASE_URL` | Neon-оос авсан URL (шинэхэн хэлбэр) |
 | `JWT_SECRET` | 64 оронтой санамсаргүй тэмдэгт (доорх команд үүсгэнэ) |
 | `CSRF_SECRET` | Өөр нэг санамсаргүй тэмдэгт |
+| `OTP_HASH_SECRET` | OTP hash-д ашиглах тусдаа, санамсаргүй 64 тэмдэгт secret |
 | `NODE_ENV` | `production` |
 | `PUBLIC_BASE_URL` | `https://workahead.me` (өмнө `https://workahead.vercel.app` байсан) — 4️⃣ хийсний дараа нэм |
 | `CORS_ORIGIN` | `https://workahead.me,https://www.workahead.me` |
@@ -37,11 +38,14 @@
 | `GEMINI_API_KEY` | Одоогийн .env дэх утга |
 | `GEMINI_MODEL` | `gemini-3.6-flash` |
 
-💡 Санамсаргүй тэмдэгт үүсгэх: PowerShell дээр
-`-join ((48..57)+(65..90)+(97..122) | Get-Random -Count 64 | % {[char]$_})`
+💡 Түлхүүр бүрд тусад нь криптографын санамсаргүй утга үүсгэ: `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Үр дүнг зөвхөн hosting-ийн secret тохиргоонд оруул; repository эсвэл чатад бүү хуул.
 
 5. **Create Web Service** дарах → build log харагдана (2-3 мин) → `https://work-ahead-api.onrender.com/api/health` → `{"ok":true}` буух ёстой
-6. **DB schema push (эхний удаа):** Render dashboard → Shell таб → `npx prisma db push` → дараа нь seed хэрэгвэл `node prisma/seed.js`
+6. **Өгөгдлийн сан:** API container эхлэх үед Prisma schema нэмэлтээр шинэчлэгдэнэ. Шинэ schema өөрчлөлт өгөгдөл устгах шаардлагатай бол startup алдаагаар зогсоно; `--accept-data-loss` ашиглан хүчээр ажиллуулахгүй.
+7. **Seed админ:** `SEED_ADMIN_EMAIL` болон `SEED_ADMIN_PASSWORD`-ийг зөвхөн Render-ийн нууц Environment Variables-д тохируулж байж `node prisma/seed.js` ажиллуул. Нууц үг 16-аас доошгүй тэмдэгт, бусад газарт ашиглаагүй байна. Урьдчилсан demo `admin@workahead.mn / admin123` бүртгэл үүсгэхгүй.
+8. **Админы хоёр дахь баталгаажуулалт:** Render дээр Resend, Brevo эсвэл SMTP provider-ийн нууцыг тохируул. Код зөвхөн `L.monhorgil2007@gmail.com` руу очиж **10 минут** хүчинтэй байна. Зөв кодоор баталгаажсан **тухайн браузер** 24 цаг дахин код шаардахгүй; өөр браузер дээр шинэ код шаардлагатай. Буруу код 5 удаа оруулахад хүчингүй болно. Шинэ код авах хооронд 60 секунд, 15 минутад дээд тал нь 5 илгээлт зөвшөөрнө. Provider ажиллахгүй үед шинэ баталгаажуулалт амжилтгүй болно.
+9. **Rate limit:** олон instance/process ашиглах үед Render/Upstash Redis URL-ийг `REDIS_URL` болгон тохируул. Redis-гүй үед limiter process дотор ажиллах тул олон instance хооронд нэгдсэн хамгаалалт баталгаатай биш.
+10. **Security rollout:** эхлээд backup болон schema шинэчлэлээ баталгаажуул. API болон client-ийн шинэ хувилбар хоорондоо таарах ёстой: login/logout/seed бүгд CSRF token шаарддаг. Өмнөх админ сессүүд дахин нэвтрэх шаардлагатай. SQL, локал тест, үлдсэн хязгаарлалтыг `docs/SECURITY.md`-ээс үз.
 
 ## 3️⃣ Vercel — Frontend (3 мин)
 
@@ -64,10 +68,11 @@
 - [ ] `https://…vercel.app` нээгдэж, нүүр харагдаж байна
 - [ ] Бүртгүүлэх → салбар сургууль/мэргэжил сонгож бүртгүүлэв
 - [ ] Тест эхлүүлж асуулт хариулж дуусгав
-- [ ] Админ нэвтрэх (deploy дараа seed хийсэн бол `admin@workahead.mn / admin123` — **шилжсэний дараа заавал солих!**)
+- [ ] Админ нэвтрэхдээ нууц үг болон имэйлээр ирсэн 6 оронтой кодоо ашиглах
 
 ## 🔐 Аюулгүй байдлын жортой зүйлс
 
 - ❗ `RATE_LIMIT_DISABLED` — production env-д **бүү нэм** (local .env дээр л байгаа, GitHub-д ороогүй)
 - ❗ Демо хэрэглэгчид (`admin@workahead.mn`, `student@workahead.mn`) seed хийсэн бол Render Shell дээр `node scripts/remove-demo-users.mjs`
+- ❗ Neon дээр backup/PITR тохиргоог тусад нь шалгаж, сэргээх туршилт хий. Аппын код DB backup-ийг орлохгүй.
 - ❗ Bonum production түлхүүр авахдаа env-үүдийг нээр нь солих

@@ -27,7 +27,7 @@ export default function ChatDemo() {
       const health = await api('/health');
       if (!health.localChatDemo) throw new Error('Зөвхөн тусгаарласан local demo сервертэй ажиллана.');
       const result = await api('/auth/login', { method: 'POST', body: { email: account.email, password: 'ChatLocal2026!' } });
-      login(result.token, result.user);
+      login(result.user);
       navigate(result.user.role === 'ADMIN' ? '/admin/chat' : '/student');
     } catch (failure) { setError(failure.message); }
     finally { setBusy(false); }

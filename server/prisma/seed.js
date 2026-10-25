@@ -14,7 +14,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const importedExamYears = new Map();
   async function importFile(filePath, programId) {
   const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  const exam = await prisma.exam.upsert({
+  if (!data || !Array.isArray(data.questions) || !data.questions.every((q) => typeof q.prompt === 'string' && q.prompt.trim())) {
+    throw new Error('Seed exam must contain a questions array with non-empty prompts');
+  }
+  const questionRows = data.questions.map((q, i) => ({
+    order: i + 1,
+    type: q.type ?? 'open',
+    topic: q.topic ?? q.tags?.[0] ?? null,
+    level: q.level ?? null,
+    year: q.year ?? Number(data.year),
+    source: q.source ?? data.source ?? null,
+    prompt: q.prompt,
+    modelSolution: q.model_solution ?? null,
+    answer: q.answer ?? null,
+    points: Number(q.points ?? 1),
+    needsReview: Boolean(q.needs_review ?? false),
+    tags: Array.isArray(q.tags) ? q.tags : [],
+  }));
+  const exam = await prisma.$transaction(async (tx) => {
+    const savedExam = await tx.exam.upsert({
     where: { code: data.exam_id },
     update: {
       title: data.title, source: data.source ?? null, year: Number(data.year),
@@ -24,24 +42,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
       code: data.exam_id, title: data.title, source: data.source ?? null,
       year: Number(data.year), variant: data.variant ?? null, programId,
     },
-  });
-  await prisma.question.deleteMany({ where: { examId: exam.id } });
-  await prisma.question.createMany({
-    data: data.questions.map((q, i) => ({
-      examId: exam.id,
-      order: i + 1,
-      type: q.type ?? 'open',
-      topic: q.topic ?? q.tags?.[0] ?? null,
-      level: q.level ?? null,
-      year: q.year ?? Number(data.year),
-      source: q.source ?? data.source ?? null,
-      prompt: q.prompt,
-      modelSolution: q.model_solution ?? null,
-      answer: q.answer ?? null,
-      points: Number(q.points ?? 1),
-      needsReview: Boolean(q.needs_review ?? false),
-      tags: Array.isArray(q.tags) ? q.tags : [],
-    })),
+    });
+    await tx.question.deleteMany({ where: { examId: savedExam.id } });
+    await tx.question.createMany({ data: questionRows.map((question) => ({ ...question, examId: savedExam.id })) });
+    return savedExam;
   });
   console.log(`  ✓ ${exam.code}: ${data.questions.length} асуулт`);
   importedExamIds.push(exam.id);
@@ -49,9 +53,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 }
 
 async function main() {
-  // --- Users ---
-  const passwordHash = await bcrypt.hash('admin123', 10);
-  const studentHash = await bcrypt.hash('student123', 10);
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const studentEmail = process.env.SEED_STUDENT_EMAIL?.trim().toLowerCase();
+  const studentPassword = process.env.SEED_STUDENT_PASSWORD;
+  if (Boolean(adminEmail) !== Boolean(adminPassword) || Boolean(studentEmail) !== Boolean(studentPassword)) {
+    throw new Error('Seed account email/password variables must be configured in pairs');
+  }
+  if (process.env.NODE_ENV === 'production' && (!adminEmail || adminPassword.length < 16)) {
+    throw new Error('Production seed requires SEED_ADMIN_EMAIL and a unique SEED_ADMIN_PASSWORD of at least 16 characters');
+  }
+  if (adminPassword && adminPassword.length < 12) throw new Error('SEED_ADMIN_PASSWORD must be at least 12 characters');
+  if (studentPassword && studentPassword.length < 12) throw new Error('SEED_STUDENT_PASSWORD must be at least 12 characters');
 
   const [university] = await Promise.all([
     prisma.university.upsert({
@@ -153,16 +166,23 @@ async function main() {
   const acadCount = await prisma.academicProgram.count();
   console.log(`  ✓ AcademicProgram (бүртгэлийн салбар/хөтөлбөр) ${acadCount} — Улаанбаатар МУИС 6 салбар (МТЭС/ШУС/БС/ХЗС/ИТС/УТСОУХНУС) + Орон судлал/Багш нэмсэн, шалгалтын Program-аас тусдаа`);
 
-  await prisma.user.upsert({
-    where: { email: 'admin@workahead.mn' },
-    update: { isVerified: true },
-    create: { email: 'admin@workahead.mn', passwordHash, name: 'Админ', role: 'ADMIN', isVerified: true },
-  });
-  const student = await prisma.user.upsert({
-    where: { email: 'student@workahead.mn' },
-    update: { isVerified: true },
-    create: { email: 'student@workahead.mn', passwordHash: studentHash, name: 'Оюутан Тэмүүлэн', role: 'STUDENT', programId: program.id, isVerified: true },
-  });
+  if (adminEmail) {
+    const passwordHash = await bcrypt.hash(adminPassword, 12);
+    await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: { passwordHash, role: 'ADMIN', isVerified: true, isActive: true },
+      create: { email: adminEmail, passwordHash, name: 'Админ', role: 'ADMIN', isVerified: true },
+    });
+  }
+  let student = null;
+  if (studentEmail) {
+    const passwordHash = await bcrypt.hash(studentPassword, 12);
+    student = await prisma.user.upsert({
+      where: { email: studentEmail },
+      update: { isVerified: true },
+      create: { email: studentEmail, passwordHash, name: 'Оюутан Тэмүүлэн', role: 'STUDENT', programId: program.id, isVerified: true },
+    });
+  }
 
   // --- Import seed files (files/*.json) ---
   const filesDir = process.env.SEED_FILES_DIR || path.resolve(__dirname, '../../files');
@@ -206,8 +226,8 @@ async function main() {
   }
 
   console.log('\nSeed дууслаа.');
-  console.log('  Админ:   admin@workahead.mn / admin123');
-  console.log(`  Оюутан:  student@workahead.mn / student123 (${student.id})`);
+  if (adminEmail) console.log(`  Админ үүсгэв: ${adminEmail}`);
+  if (student) console.log(`  Демо оюутан үүсгэв: ${student.email} (${student.id})`);
 }
 
 main()

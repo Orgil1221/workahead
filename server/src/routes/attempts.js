@@ -8,6 +8,8 @@ import { shuffleChoicesForAttempt } from '../services/shuffle.js';
 const router = Router();
 router.use(requireAuth);
 
+const hasChoiceSet = (choices) => Array.isArray(choices) && choices.length >= 2 && choices.length <= 4;
+
 function normalizeAnswer(s) {
   if (!s) return '';
   return String(s).trim().replace(/\s+/g, ' ').replace(/^\$+|\$+$/g, '').toLowerCase();
@@ -31,9 +33,9 @@ router.post('/', async (req, res, next) => {
     }
     if (normalizedMode === 'TEST') {
       const qs = await prisma.question.findMany({ where: { examId }, select: { type: true, choices: true } });
-      const hasTestChoices = qs.some((q) => q.type === 'test' || (Array.isArray(q.choices) && q.choices.length === 4));
+      const hasTestChoices = qs.some((q) => q.type === 'test' || hasChoiceSet(q.choices));
       if (!hasTestChoices) {
-        return res.status(400).json({ error: 'Энэ шалгалтад тест сонголт оруулаагүй байна — зөвхөн Задгай горимоор ажиллах боломжтой. Админ тест асуулт (4 сонголт + correct_choice) нэмж оруулна уу.' });
+        return res.status(400).json({ error: 'Энэ шалгалтад тест сонголт оруулаагүй байна — зөвхөн Задгай горимоор ажиллах боломжтой. Тест асуултад 2–4 сонголт + correct_choice оруулна уу.' });
       }
     }
     const attempt = await prisma.testAttempt.create({
@@ -66,7 +68,7 @@ router.post('/:id/answers', async (req, res, next) => {
     let feedback = null;
     let gradedBy = null;
 
-    const isTestQuestion = question.type === 'test' || (attempt.mode === 'TEST' && Array.isArray(question.choices) && question.choices.length === 4);
+    const isTestQuestion = question.type === 'test' || (attempt.mode === 'TEST' && hasChoiceSet(question.choices));
     if (isTestQuestion) {
       // TEST: A/B/C/D — шууд шалгана, AI оролцохгүй; per-attempt random shuffle тул attemptId-ээр хольсон correctChoice-тай харьцуулна
       const given = String(givenAnswer || '').trim().toUpperCase();
@@ -75,7 +77,7 @@ router.post('/:id/answers', async (req, res, next) => {
       }
       let correct = String(question.correctChoice || '').toUpperCase();
       // Shuffle per attempt in BOTH modes — same seed as GET /exams?attemptId, so student's seen order matches grading
-      if (Array.isArray(question.choices) && question.choices.length === 4) {
+      if (hasChoiceSet(question.choices)) {
         const shuffled = shuffleChoicesForAttempt(question.choices, question.correctChoice, attempt.id, question.id);
         correct = String(shuffled.correctChoice || '').toUpperCase();
       }
@@ -240,7 +242,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
       ...attempt,
       answers: attempt.answers.map((a) => {
         let q = a.question;
-        if (Array.isArray(q.choices) && q.choices.length === 4 && q.correctChoice) {
+        if (hasChoiceSet(q.choices) && q.correctChoice) {
           const shuffled = shuffleChoicesForAttempt(q.choices, q.correctChoice, attempt.id, q.id);
           q = { ...q, choices: shuffled.choices, correctChoice: shuffled.correctChoice };
         }

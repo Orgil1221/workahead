@@ -151,10 +151,10 @@ function PasswordForm({ onChangePassword, onClose }) {
   return <form id="pf-password-form" className="pf-form pf-password-form" onSubmit={submit} aria-busy={busy}><fieldset disabled={busy}>
     <div className="pf-field"><label htmlFor="pf-current-password">Одоогийн нууц үг</label><input id="pf-current-password" type="password" autoComplete="current-password" autoFocus required value={password.current} onChange={(event) => setPassword({ ...password, current: event.target.value })} /></div>
     <div className="pf-form-grid">
-      <div className="pf-field"><label htmlFor="pf-new-password">Шинэ нууц үг</label><input id="pf-new-password" type="password" autoComplete="new-password" required minLength={8} aria-describedby="pf-password-hint" value={password.next} onChange={(event) => setPassword({ ...password, next: event.target.value })} /></div>
-      <div className="pf-field"><label htmlFor="pf-confirm-password">Шинэ нууц үг давтах</label><input id="pf-confirm-password" type="password" autoComplete="new-password" required minLength={8} value={password.confirm} onChange={(event) => setPassword({ ...password, confirm: event.target.value })} /></div>
+      <div className="pf-field"><label htmlFor="pf-new-password">Шинэ нууц үг</label><input id="pf-new-password" type="password" autoComplete="new-password" required minLength={12} aria-describedby="pf-password-hint" value={password.next} onChange={(event) => setPassword({ ...password, next: event.target.value })} /></div>
+      <div className="pf-field"><label htmlFor="pf-confirm-password">Шинэ нууц үг давтах</label><input id="pf-confirm-password" type="password" autoComplete="new-password" required minLength={12} value={password.confirm} onChange={(event) => setPassword({ ...password, confirm: event.target.value })} /></div>
     </div>
-    <p id="pf-password-hint" className="pf-field-hint">Нууц үг дор хаяж 8 тэмдэгт байна.</p>
+    <p id="pf-password-hint" className="pf-field-hint">Нууц үг дор хаяж 12 тэмдэгт байна.</p>
     {error && <p className="pf-inline-error" role="alert">{error}</p>}
     <div className="pf-form-actions"><button className="pf-primary" type="submit" disabled={busy}>{busy ? 'Сольж байна…' : 'Нууц үг шинэчлэх'}</button><button className="pf-secondary" type="button" onClick={onClose}>Цуцлах</button></div>
   </fieldset></form>;

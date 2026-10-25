@@ -17,7 +17,7 @@ const tabs = [
   { to: '/preview/study', label: 'Нүүр', icon: 'home', end: true },
   { to: '/preview/dashboard', label: 'Ахиц', icon: 'chart' },
   { to: '/preview/profile', label: 'Профайл', icon: 'users' },
-  { to: '/preview/study/history', label: 'Түүх', icon: 'clock' },
+  { to: '/student/history', label: 'Түүх', icon: 'clock' },
   { to: '/preview/payment', label: 'Төлбөр', icon: 'card' },
 ];
 export default function StudyPreview() {

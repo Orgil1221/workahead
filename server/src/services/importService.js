@@ -1,6 +1,6 @@
 import prisma from '../db.js';
 
-function buildChoicesFromImport(q) {
+export function buildChoicesFromImport(q) {
   const hasChoicesInput = Array.isArray(q.choices) || q.choiceA || q.choiceB || q.choiceC || q.choiceD || q.correct_choice || q.correctChoice;
   // Only skip choices if neither test nor choices input provided
   if (!hasChoicesInput) return { choices: null, correctChoice: null };
@@ -20,10 +20,11 @@ function buildChoicesFromImport(q) {
     ];
   }
   if (choices) {
-    // ensure 4 and correct exists
+    // Validate a complete choice set and its answer key
     const correct = String(q.correct_choice || q.correctChoice || '').toUpperCase().trim();
-    if (choices.length !== 4 || !choices.every((c) => c.text)) throw Object.assign(new Error(`Тест асуулт "${(q.prompt||'').slice(0,30)}": 4 сонголт + correct_choice шаардлагатай`), { status: 400 });
-    if (!['A','B','C','D'].includes(correct)) throw Object.assign(new Error(`Тест асуулт "${(q.prompt||'').slice(0,30)}": correct_choice A/B/C/D байх ёстой`), { status: 400 });
+    const choiceKeys = new Set(choices.map((choice) => choice.key));
+    if (choices.length < 2 || choices.length > 4 || !choices.every((c) => c.text) || choiceKeys.size !== choices.length) throw Object.assign(new Error(`Тест асуулт "${(q.prompt||'').slice(0,30)}": 2–4 ялгаатай сонголт шаардлагатай`), { status: 400 });
+    if (!['A','B','C','D'].includes(correct) || !choiceKeys.has(correct)) throw Object.assign(new Error(`Тест асуулт "${(q.prompt||'').slice(0,30)}": correct_choice нь сонголтын A/B/C/D түлхүүртэй таарах ёстой`), { status: 400 });
     return { choices, correctChoice: correct };
   }
   // If hasChoicesInput but no valid choices array -> treat as needsReview
@@ -45,59 +46,57 @@ export async function importExamJson(data, programId) {
   }
   if (!Array.isArray(data.questions)) throw Object.assign(new Error('"questions" массив байх ёстой'), { status: 400 });
 
-  const program = await prisma.program.findUnique({ where: { id: programId } });
-  if (!program) throw Object.assign(new Error('Хөтөлбөр олдсонгүй'), { status: 404 });
-
-  const exam = await prisma.exam.upsert({
-    where: { code: data.exam_id },
-    update: {
-      title: data.title,
-      source: data.source ?? null,
-      year: Number(data.year),
-      variant: data.variant ?? null,
-      programId,
-    },
-    create: {
-      code: data.exam_id,
-      title: data.title,
-      source: data.source ?? null,
-      year: Number(data.year),
-      variant: data.variant ?? null,
-      programId,
-    },
+  const questions = data.questions.map((q, i) => {
+    const isTest = (q.type || 'open') === 'test';
+    const { choices, correctChoice } = buildChoicesFromImport(q);
+    if (typeof q.prompt !== 'string' || !q.prompt.trim()) {
+      throw Object.assign(new Error(`Асуулт ${i + 1}: prompt хоосон байна`), { status: 400 });
+    }
+    return {
+      order: i + 1,
+      type: isTest ? 'test' : 'open',
+      topic: q.topic ?? q.tags?.[0] ?? null,
+      level: q.level ?? null,
+      year: q.year ?? Number(data.year),
+      source: q.source ?? data.source ?? null,
+      prompt: q.prompt,
+      modelSolution: q.model_solution ?? q.explanation ?? null,
+      answer: q.answer ?? null,
+      choices,
+      correctChoice,
+      points: Number(q.points ?? 1),
+      needsReview: isTest && !choices ? true : Boolean(q.needs_review ?? false),
+      tags: Array.isArray(q.tags) ? q.tags : [],
+    };
   });
 
-  // Replace questions wholesale so re-importing an updated file stays in sync
-  await prisma.question.deleteMany({ where: { examId: exam.id } });
-  await prisma.question.createMany({
-    data: data.questions.map((q, i) => {
-      const isTest = (q.type || 'open') === 'test';
-      const { choices, correctChoice } = buildChoicesFromImport(q);
-      return {
-        examId: exam.id,
-        order: i + 1,
-        type: isTest ? 'test' : 'open',
-        topic: q.topic ?? q.tags?.[0] ?? null,
-        level: q.level ?? null,
-        year: q.year ?? Number(data.year),
-        source: q.source ?? data.source ?? null,
-        prompt: q.prompt,
-        modelSolution: q.model_solution ?? q.explanation ?? null,
-        answer: q.answer ?? null,
-        choices,
-        correctChoice,
-        points: Number(q.points ?? 1),
-        needsReview: isTest && !choices ? true : Boolean(q.needs_review ?? false),
-        tags: Array.isArray(q.tags) ? q.tags : [],
-      };
-    }),
-  });
+  return prisma.$transaction(async (tx) => {
+    const program = await tx.program.findUnique({ where: { id: programId }, select: { id: true } });
+    if (!program) throw Object.assign(new Error('Хөтөлбөр олдсонгүй'), { status: 404 });
 
-  return {
-    examId: exam.id,
-    code: exam.code,
-    imported: data.questions.length,
-  };
+    const exam = await tx.exam.upsert({
+      where: { code: data.exam_id },
+      update: {
+        title: data.title,
+        source: data.source ?? null,
+        year: Number(data.year),
+        variant: data.variant ?? null,
+        programId,
+      },
+      create: {
+        code: data.exam_id,
+        title: data.title,
+        source: data.source ?? null,
+        year: Number(data.year),
+        variant: data.variant ?? null,
+        programId,
+      },
+    });
+
+    await tx.question.deleteMany({ where: { examId: exam.id } });
+    await tx.question.createMany({ data: questions.map((question) => ({ ...question, examId: exam.id })) });
+    return { examId: exam.id, code: exam.code, imported: data.questions.length };
+  });
 }
 
 /**

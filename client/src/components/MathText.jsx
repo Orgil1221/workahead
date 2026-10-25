@@ -2,7 +2,8 @@ import { InlineMath, BlockMath } from 'react-katex';
 import 'katex/dist/katex.min.css';
 
 // $...$ → inline, $$...$$ → block, плюс нүцгэн LaTeX командууд (\frac, \sqrt гэх мэт)
-const MATH_SPLIT = /(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g;
+const CONTENT_SPLIT = /(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$|!\[[^\]]{0,120}\]\(data:image\/svg\+xml;base64,<svg\b[\s\S]*?<\/svg>\)|!\[[^\]]{0,120}\]\(data:image\/(?:png|jpeg|webp|svg\+xml);base64,[\sA-Za-z0-9+/=]+\))/g;
+const IMAGE_MARKDOWN = /^!\[([^\]]{0,120})\]\((data:image\/(?:png|jpeg|webp|svg\+xml);base64,[\sA-Za-z0-9+/=]+|data:image\/svg\+xml;base64,(<svg\b[\s\S]*<\/svg>))\)$/;
 // Нүцгэн LaTeX: \command{...}{...} эсвэл \command — $ байхгүй үед илрүүлж $...$ болгоно
 const BARE_LATEX_RE = /\\[a-zA-Z]+(?:\s*\{[^{}]*\}){0,2}|\\[a-zA-Z]+/g;
 
@@ -28,10 +29,17 @@ export default function MathText({ text }) {
   let raw = String(text);
   // 1) $ байхгүй ч \command байвал автоматаар $...$ нэмэх
   raw = autoWrapBareLatex(raw);
-  const parts = raw.split(MATH_SPLIT);
+  const parts = raw.split(CONTENT_SPLIT);
   return (
     <>
       {parts.map((part, i) => {
+        const image = part.match(IMAGE_MARKDOWN);
+        const imageSource = image?.[3]
+            ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(image[3])}`
+            : image?.[2]?.replace(/\s/g, '');
+        if (image && imageSource.length <= 2_000_000) {
+          return <img key={i} src={imageSource} alt={image[1] || 'Асуултын зураг'} loading="lazy" style={{ display: 'block', width: '100%', maxWidth: '100%', maxHeight: 440, objectFit: 'contain', margin: '12px auto', borderRadius: 8 }} />;
+        }
         if (part.startsWith('$$') && part.endsWith('$$') && part.length > 4) {
           try { return <BlockMath key={i} math={part.slice(2, -2)} />; }
           catch { return <span key={i} style={{ color: 'var(--accent)' }}>{part}</span>; }

@@ -5,7 +5,10 @@ import { requireAuth, requireAdmin } from '../../middleware/auth.js';
 import { importExamJson, importExamCsv } from '../../services/importService.js';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 5, fields: 1, parts: 6, fieldNameSize: 100, fieldSize: 128 },
+});
 router.use(requireAuth, requireAdmin);
 
 // Upload one or more import-format JSON files targeting a program

@@ -3,7 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { doubleCsrf } from 'csrf-csrf';
+import { installCsrf } from './middleware/csrf.js';
+import { validateProductionSecurity } from './config/security.js';
 import { rateLimitFlexible } from './middleware/rateLimitFlexible.js';
 import authRoutes from './routes/auth.js';
 import catalogRoutes from './routes/catalog.js';
@@ -23,9 +24,15 @@ import adminUserRoutes from './routes/admin/users.js';
 import adminImportRoutes from './routes/admin/import.js';
 import adminPlanRoutes from './routes/admin/plans.js';
 import adminSettingsRoutes from './routes/admin/settings.js';
+import adminAuditRoutes from './routes/admin/audit.js';
+import { auditAdminActions } from './middleware/adminAudit.js';
 import { academicRouter, academicAdminRouter } from './routes/academic.js';
 
 const app = express();
+// Render terminates TLS and forwards one trusted proxy hop. Keep this narrow
+// so client-supplied X-Forwarded-For values are not used as the source IP.
+app.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);
+validateProductionSecurity();
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
@@ -33,9 +40,6 @@ app.use(helmet({
 app.use(cookieParser());
 // CORS — require explicit origin in production
 const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean) : null;
-if (!corsOrigin && process.env.NODE_ENV === 'production') {
-  console.warn('CORS_ORIGIN not set — default allow is permissive');
-}
 app.use(cors(corsOrigin ? { origin: corsOrigin, credentials: true } : { origin: true, credentials: true }));
 app.use(express.json({
   limit: '1mb',
@@ -47,40 +51,11 @@ app.use(express.json({
 app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: process.uptime(), time: new Date().toISOString(), ...(process.env.NODE_ENV !== 'production' && process.env.CHAT_LOCAL_DEMO === '1' ? { localChatDemo: true } : {}) }));
 app.get('/api/ping', (_req, res) => res.json({ ok: true }));
 
-// General rate limit — 200 req/min per IP (keep-alive exempt inside middleware)
+// General rate limit — 200 req/min per IP; only the health routes above are exempt.
 app.use('/api', rateLimitFlexible('general'));
+app.use('/api', auditAdminActions);
 
-// CSRF protection (double submit) — GET/HEAD/OPTIONS ignored, webhook excluded
-if (!process.env.CSRF_SECRET && !process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  console.error('CRITICAL: CSRF_SECRET/JWT_SECRET missing in production');
-}
-const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET || process.env.JWT_SECRET || 'fallback-secret-change-me',
-  getSessionIdentifier: (req) => {
-    const header = req.headers.authorization || '';
-    const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
-    return bearer || req.cookies?.wa_token || 'anonymous';
-  },
-  cookieName: 'x-csrf-token',
-  cookieOptions: {
-    sameSite: 'Lax',
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: false,
-    path: '/',
-  },
-  size: 64,
-  ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
-  getCsrfTokenFromRequest: (req) => req.headers['x-csrf-token'] || req.headers['x-xsrf-token'],
-});
-app.get('/api/auth/csrf', (req, res) => {
-  res.set('Cache-Control', 'no-store');
-  res.json({ csrfToken: generateCsrfToken(req, res) });
-});
-// Webhook uses HMAC, not CSRF — skip; login/register/logout/otp/forgot/seed need no CSRF before auth (seed is admin JWT only)
-app.use((req, res, next) => {
-  if (req.path === '/api/payments/webhook' || req.path === '/api/auth/login' || req.path === '/api/auth/register' || req.path === '/api/auth/csrf' || req.path === '/api/auth/logout' || req.path === '/api/auth/send-otp' || req.path === '/api/auth/verify-otp' || req.path === '/api/auth/send-register-otp' || req.path === '/api/auth/forgot-password' || req.path === '/api/auth/reset-password' || req.path === '/api/admin/academic-programs/seed') return next();
-  return doubleCsrfProtection(req, res, next);
-});
+installCsrf(app);
 
 app.use('/api/auth', authRoutes);
 app.use('/api', academicRouter);
@@ -94,6 +69,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/admin/audit', adminAuditRoutes);
 app.use('/api/admin/usage', adminUsageRoutes);
 app.use('/api/admin/catalog', adminCatalogRoutes);
 app.use('/api/admin/stats', adminStatsRoutes);
@@ -105,13 +81,20 @@ app.use('/api/admin/academic-programs', academicAdminRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(err.status || 500).json({ error: err.message || 'Серверийн алдаа', code: err.code });
+  const status = err.status || 500;
+  res.status(status).json({
+    error: process.env.NODE_ENV === 'production' && status >= 500 ? 'Серверийн алдаа' : (err.message || 'Серверийн алдаа'),
+    ...(process.env.NODE_ENV === 'production' && status >= 500 ? {} : { code: err.code }),
+  });
 });
 
 const port = process.env.PORT || 4000;
 app.listen(port, process.env.HOST || '0.0.0.0', () => {
   console.log(`Work Ahead API → http://localhost:${port}`);
   Promise.all([import('./services/usage.js'), import('./db.js')]).then(([usage, database]) => {
+    database.default.emailOtp.updateMany({ where: { otp: { not: null } }, data: { otp: null } })
+      .then(() => database.default.user.updateMany({ where: { verifyOtp: { not: null } }, data: { verifyOtp: null } }))
+      .catch((error) => console.error('Legacy plaintext OTP cleanup failed:', error.message));
     const cleanup = () => usage.pruneUsage(database.default).catch((error) => console.error('Usage retention:', error.message));
     setTimeout(cleanup, 30000);
     setInterval(cleanup, 24 * 60 * 60 * 1000);

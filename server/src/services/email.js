@@ -12,20 +12,29 @@ export function generateOtp() {
 }
 
 const EMAIL_COPY = {
+  'admin-login': {
+    subject: 'WorkAhead — Админы нэвтрэх код',
+    title: 'Админы нэвтрэлтийг баталгаажуулах',
+    intro: 'WorkAhead админ эрхээр нэвтрэх хүсэлт ирлээ. Нэвтрэлтийг баталгаажуулахын тулд доорх кодыг оруулна уу. Хэрэв та хүсэлт гаргаагүй бол нууц үгээ солино уу.',
+    validity: '10 минут',
+  },
   register: {
     subject: 'WorkAhead — Бүртгэл баталгаажуулах код',
     title: 'Бүртгэл баталгаажуулах',
     intro: 'WorkAhead платформд бүртгүүлж байгаад баярлалаа. Бүртгэлээ баталгаажуулахын тулд доорх 6 оронтой кодыг оруулна уу.',
+    validity: '10 минут',
   },
   reset: {
     subject: 'WorkAhead — Нууц үг сэргээх код',
     title: 'Нууц үг сэргээх',
     intro: 'Таны бүртгэлд нууц үг сэргээх хүсэлт ирлээ. Шинэ нууц үг үүсгэхийн тулд доорх 6 оронтой кодыг оруулна уу. Хэрэв та энэ хүсэлтийг гаргаагүй бол энэ мэйлийг үл тооно уу.',
+    validity: '10 минут',
   },
   verify: {
     subject: 'WorkAhead — Баталгаажуулах код',
     title: 'Баталгаажуулах код',
     intro: 'Таны 6 оронтой баталгаажуулах код:',
+    validity: '10 минут',
   },
 };
 
@@ -49,7 +58,7 @@ function buildOtpHtml({ otp, purpose }) {
           </div>
           <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px;background:#fff8e6;border:1px solid #f0d48a;border-radius:8px">
             <tr><td style="padding:12px 16px;color:#6b5a1e;font-size:13px;line-height:1.6">
-              <strong>Анхааруулга:</strong> Энэ код <strong>10 минутын</strong> дотор хүчинтэй. Кодыг хэнд ч дамжуулж болохгүй. WorkAhead-ийн ажилтан танаас кодыг хэзээ ч асуухгүй.
+              <strong>Анхааруулга:</strong> Энэ код <strong>${copy.validity}</strong> хүчинтэй. Кодыг хэнд ч дамжуулж болохгүй. WorkAhead-ийн ажилтан танаас кодыг хэзээ ч асуухгүй.
             </td></tr>
           </table>
           <p style="color:#6b7484;font-size:13px;line-height:1.6;margin:0">Хүндэтгэсэн,<br><strong style="color:#1a2a4a">WorkAhead баг</strong></p>
@@ -162,7 +171,7 @@ function providerOrder() {
 export async function sendOtpEmail(to, otp, purpose = 'verify') {
   const from = process.env.EMAIL_FROM || process.env.BUSINESS_MAIL || 'noreply@workahead.me';
   const copy = EMAIL_COPY[purpose] || EMAIL_COPY.verify;
-  const msg = { from, to, subject: copy.subject, html: buildOtpHtml({ otp, purpose }), text: `WorkAhead — ${copy.title}: ${otp} (10 минут хүчинтэй). Хэнд ч битгий хуваалцаарай. www.workahead.me` };
+  const msg = { from, to, subject: copy.subject, html: buildOtpHtml({ otp, purpose }), text: `WorkAhead — ${copy.title}: ${otp} (${copy.validity} хүчинтэй). Хэнд ч битгий хуваалцаарай. www.workahead.me` };
 
   for (const name of providerOrder()) {
     if (!providers[name].configured()) continue;
@@ -182,9 +191,11 @@ export async function sendOtpEmail(to, otp, purpose = 'verify') {
     }
   }
 
-  // Console fallback — still succeeds for dev/test (OTP visible in server logs)
-  console.log(`[OTP Fallback] To: ${to} | Code: ${otp} | From: ${from} — set RESEND_API_KEY / BREVO_API_KEY / SMTP_HOST to send real mail`);
-  return true;
+  if (process.env.NODE_ENV === 'production') {
+    throw Object.assign(new Error('OTP email delivery is unavailable'), { status: 503 });
+  }
+  console.log(`[OTP Fallback] Email provider unavailable; OTP not logged for ${to}.`);
+  return false;
 }
 
 export function isEmailConfigured() {

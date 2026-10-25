@@ -2,17 +2,24 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../../db.js';
 import { requireAuth, requireAdmin } from '../../middleware/auth.js';
+import { revokeAdminDevices } from '../../services/adminMfa.js';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
 
-router.get('/', async (_req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const now = new Date();
+    const take = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
+    if (cursor && !(await prisma.user.findUnique({ where: { id: cursor }, select: { id: true } })))
+      return res.status(400).json({ error: 'Хуудасны зааг буруу байна' });
     const users = await prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
+      take: take + 1,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: {
-        id: true, email: true, name: true, role: true, createdAt: true,
+        id: true, email: true, name: true, role: true, isActive: true, createdAt: true,
         program: { select: { id: true, name: true, school: true } },
         academicProgramId: true,
         academicProgram: { select: { id: true, university: true, school: true, name: true } },
@@ -25,6 +32,8 @@ router.get('/', async (_req, res, next) => {
         },
       },
     });
+    const hasMore = users.length > take;
+    if (hasMore) users.pop();
     const mapped = users.map((u) => {
       const sub = u.payments?.[0] || null;
       const { payments, ...rest } = u;
@@ -39,7 +48,7 @@ router.get('/', async (_req, res, next) => {
         } : null,
       };
     });
-    res.json({ users: mapped });
+    res.json({ users: mapped, nextCursor: hasMore ? users.at(-1)?.id || null : null });
   } catch (e) { next(e); }
 });
 
@@ -48,13 +57,15 @@ router.post('/', async (req, res, next) => {
     const { email, password, name, role, programId, academicProgramId } = req.body;
     if (!email || !password || !name)
       return res.status(400).json({ error: 'Имэйл, нууц үг, нэр шаардлагатай' });
+    if (typeof password !== 'string' || password.length < 12 || password.length > 72)
+      return res.status(400).json({ error: 'Нууц үг 12–72 тэмдэгт байх ёстой' });
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return res.status(409).json({ error: 'Энэ имэйл бүртгэлтэй байна' });
     const user = await prisma.user.create({
       data: {
         email,
         name,
-        passwordHash: await bcrypt.hash(password, 10),
+        passwordHash: await bcrypt.hash(password, 12),
         role: role === 'ADMIN' ? 'ADMIN' : 'STUDENT',
         programId: programId || null,
         academicProgramId: academicProgramId || null,
@@ -67,20 +78,32 @@ router.post('/', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const { name, role, programId, academicProgramId, password } = req.body;
-    const user = await prisma.user.update({
+    const { name, role, programId, academicProgramId, password, isActive } = req.body;
+    if (password !== undefined && (typeof password !== 'string' || password.length < 12 || password.length > 72))
+      return res.status(400).json({ error: 'Шинэ нууц үг 12–72 тэмдэгт байх ёстой' });
+    const passwordHash = password ? await bcrypt.hash(password, 12) : undefined;
+    const user = await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
       where: { id: req.params.id },
       data: {
         ...(name !== undefined && { name }),
         ...(role !== undefined && { role: role === 'ADMIN' ? 'ADMIN' : 'STUDENT' }),
+        ...(typeof isActive === 'boolean' && { isActive }),
+        ...((role !== undefined || password || isActive === false) && { adminMfaVerifiedAt: null }),
         ...(programId !== undefined && { programId: programId || null }),
         ...(academicProgramId !== undefined && { academicProgramId: academicProgramId || null }),
-        ...(password && { passwordHash: await bcrypt.hash(password, 10) }),
+        ...(passwordHash && { passwordHash }),
       },
       select: {
         id: true, email: true, name: true, role: true, programId: true, academicProgramId: true,
         academicProgram: { select: { id: true, university: true, school: true, name: true } },
       },
+    });
+    if (password || isActive === false || role !== undefined) {
+      await tx.userSession.deleteMany({ where: { userId: updated.id } });
+      await revokeAdminDevices(tx, updated);
+    }
+    return updated;
     });
     res.json({ user });
   } catch (e) { next(e); }
@@ -139,8 +162,14 @@ router.delete('/:id', async (req, res, next) => {
   try {
     if (req.params.id === req.user.id)
       return res.status(400).json({ error: 'Өөрийн бүртгэлийг устгаж болохгүй' });
-    await prisma.user.delete({ where: { id: req.params.id } });
-    res.json({ ok: true });
+    const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { email: true } });
+    if (!target) return res.status(404).json({ error: 'Хэрэглэгч олдсонгүй' });
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: req.params.id }, data: { isActive: false, adminMfaVerifiedAt: null } });
+      await tx.userSession.deleteMany({ where: { userId: req.params.id } });
+      await revokeAdminDevices(tx, { id: req.params.id, email: target.email });
+    });
+    res.json({ ok: true, deactivated: true });
   } catch (e) { next(e); }
 });
 

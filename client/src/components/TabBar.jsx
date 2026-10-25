@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 
 const icons = {
+  chat: 'M21 11.5a8.5 8.5 0 0 1-8.5 8.5H5l-3 2v-10a9.5 9.5 0 0 1 19 0ZM7 10h10M7 14h6',
   home: 'M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-8.5z',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   book: 'M4 5a2 2 0 0 1 2-2h14v18H6a2 2 0 0 0-2 2V5zm4 2h8m-8 4h8',
