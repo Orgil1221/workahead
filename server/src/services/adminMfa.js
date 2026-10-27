@@ -2,7 +2,8 @@ import crypto from 'node:crypto';
 import { generateOtp } from './email.js';
 import { otpDigest, otpMatches } from './otp.js';
 
-export const ADMIN_OTP_RECIPIENT = 'L.monhorgil2007@gmail.com';
+// Configure the private recipient on the server, never in public source or responses.
+export const ADMIN_OTP_RECIPIENT = process.env.ADMIN_OTP_RECIPIENT?.trim();
 export const ADMIN_CODE_TTL_MS = 10 * 60 * 1000;
 export const ADMIN_TRUST_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -58,7 +59,7 @@ export function createAdminMfa({ db, sendEmail, now = () => new Date() }) {
       const previous = await db.adminAuthChallenge.findUnique({ where: { tokenHash: previousHash } });
       if (previous && previous.userId === user.id && !previous.consumedAt && previous.attempts < MAX_ATTEMPTS
         && previous.expiresAt > at && previous.credentialHash === credentials(user)) {
-        return { mfaRequired: true, email: ADMIN_OTP_RECIPIENT, expiresAt: previous.expiresAt };
+        return { mfaRequired: true, expiresAt: previous.expiresAt };
       }
     }
     const browserToken = token();
@@ -94,7 +95,7 @@ export function createAdminMfa({ db, sendEmail, now = () => new Date() }) {
       throw failure('Баталгаажуулах код илгээж чадсангүй. Түр хүлээгээд дахин оролдоно уу.', 503, 'ADMIN_MFA_DELIVERY');
     }
     res.cookie(adminCookieName('challenge'), browserToken, { ...cookieOptions(), maxAge: ADMIN_CODE_TTL_MS });
-    return { mfaRequired: true, email: ADMIN_OTP_RECIPIENT, expiresAt };
+    return { mfaRequired: true, expiresAt };
   }
 
   async function verify(email, otp, req, res) {

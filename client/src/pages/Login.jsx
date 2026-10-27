@@ -8,7 +8,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [adminOtp, setAdminOtp] = useState('');
   const [mfaPending, setMfaPending] = useState(false);
-  const [mfaDestination, setMfaDestination] = useState('');
   const [error, setError] = useState(() => {
     try {
       if (localStorage.getItem('wa_kicked') === '1') {
@@ -32,7 +31,6 @@ export default function Login() {
         : await api('/auth/login', { method: 'POST', body: { email, password } });
       if (data.mfaRequired) {
         setMfaPending(true);
-        setMfaDestination(data.email || '');
         setError(null);
         return;
       }
@@ -57,10 +55,10 @@ export default function Login() {
             <label htmlFor="password">Нууц үг</label>
             <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </> : <>
-            <p className="small">Кодыг <strong>{mfaDestination}</strong> хаяг руу илгээлээ. Код 10 минут хүчинтэй. Баталгаажуулсны дараа энэ браузер дээр 24 цаг дахин код шаардахгүй.</p>
+            <p className="small">Баталгаажуулах имэйлд 6 оронтой код илгээлээ. Код 10 минут хүчинтэй. Баталгаажуулсны дараа энэ браузер дээр 24 цаг дахин код шаардахгүй.</p>
             <label htmlFor="admin-otp">Имэйлээр ирсэн 6 оронтой код</label>
             <input id="admin-otp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={adminOtp} onChange={(e) => setAdminOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} />
-            <button type="button" className="btn secondary" disabled={busy} onClick={() => { setMfaPending(false); setMfaDestination(''); setAdminOtp(''); setError(null); }}>Буцах / хугацаа дууссан код шинэчлэх</button>
+            <button type="button" className="btn secondary" disabled={busy} onClick={() => { setMfaPending(false); setAdminOtp(''); setError(null); }}>Буцах / хугацаа дууссан код шинэчлэх</button>
           </>}
           {!mfaPending && <p className="small" style={{ textAlign: 'right', margin: '6px 0 0' }}>
             <Link to="/forgot-password">Нууц үгээ мартсан уу?</Link>

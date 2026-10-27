@@ -10,6 +10,10 @@ export function validateProductionSecurity(env = process.env) {
   if (new Set(names.map((name) => env[name])).size !== names.length) {
     throw new Error('JWT_SECRET, CSRF_SECRET and OTP_HASH_SECRET must be different');
   }
+  const recipient = env.ADMIN_OTP_RECIPIENT?.trim();
+  if (!recipient || recipient.length > 254 || !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(recipient)) {
+    throw new Error('ADMIN_OTP_RECIPIENT must configure one private admin email address');
+  }
   const origins = (env.CORS_ORIGIN || '').split(',').map((value) => value.trim()).filter(Boolean);
   if (!origins.length || origins.some((value) => {
     try { const url = new URL(value); return url.protocol !== 'https:' || url.origin !== value; }

@@ -34,7 +34,7 @@ export default function ForgotPassword() {
       await api('/auth/forgot-password', { method: 'POST', body: { email: email.trim() } });
       setStep(2);
       setCooldown(60);
-      setInfo('Хэрэв бүртгэл байгаа бол 6 оронтой код илгээгдлээ. Админ хэрэглэгч бол L.monhorgil2007@gmail.com хаягаа шалгана уу.');
+      setInfo('Хэрэв бүртгэл байгаа бол сэргээх имэйлд 6 оронтой код илгээгдлээ. Ирсэн захидал болон Spam хавтсаа шалгана уу.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -104,7 +104,7 @@ export default function ForgotPassword() {
         ) : (
           <form className="card" onSubmit={reset}>
             <p className="small muted" style={{ marginTop: 0 }}>
-              <strong>{email}</strong> бүртгэлд зориулсан кодоо оруулж шинэ нууц үгээ үүсгэнэ үү. Админ код зөвхөн L.monhorgil2007@gmail.com хаягт ирнэ.
+              <strong>{email}</strong> бүртгэлийн сэргээх кодоо оруулж шинэ нууц үгээ үүсгэнэ үү.
             </p>
             <label>OTP код</label>
             <OtpInput value={otp} onChange={setOtp} disabled={busy} />

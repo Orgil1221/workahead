@@ -13,6 +13,7 @@ test('production rejects missing, example or reused secrets and non-HTTPS CORS o
     JWT_SECRET: crypto.randomBytes(32).toString('hex'),
     CSRF_SECRET: crypto.randomBytes(32).toString('hex'),
     OTP_HASH_SECRET: crypto.randomBytes(32).toString('hex'),
+    ADMIN_OTP_RECIPIENT: 'private-security-mailbox@example.test',
   };
   assert.doesNotThrow(() => validateProductionSecurity(env));
   for (const name of ['JWT_SECRET', 'CSRF_SECRET', 'OTP_HASH_SECRET']) {
@@ -20,6 +21,9 @@ test('production rejects missing, example or reused secrets and non-HTTPS CORS o
     assert.throws(() => validateProductionSecurity({ ...env, [name]: 'change-me-to-a-long-random-secret-at-least-32-chars' }), new RegExp(name));
   }
   assert.throws(() => validateProductionSecurity({ ...env, CSRF_SECRET: env.JWT_SECRET }), /different/);
+  for (const ADMIN_OTP_RECIPIENT of ['', 'not-an-email', 'one@example.test,two@example.test', 'one@example.test\r\nBcc: two@example.test']) {
+    assert.throws(() => validateProductionSecurity({ ...env, ADMIN_OTP_RECIPIENT }), /ADMIN_OTP_RECIPIENT/);
+  }
   for (const CORS_ORIGIN of ['', '*', 'http://workahead.me', 'https://workahead.me/path']) {
     assert.throws(() => validateProductionSecurity({ ...env, CORS_ORIGIN }), /CORS_ORIGIN/);
   }

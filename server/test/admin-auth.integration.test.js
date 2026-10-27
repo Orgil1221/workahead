@@ -16,6 +16,7 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
 process.env.OTP_HASH_SECRET = crypto.randomBytes(32).toString('hex');
 process.env.CSRF_SECRET = crypto.randomBytes(32).toString('hex');
+process.env.ADMIN_OTP_RECIPIENT = 'private-security-mailbox@example.test';
 process.env.RATE_LIMIT_DISABLED = '1';
 delete process.env.REDIS_URL;
 const run = promisify(execFile);
@@ -117,8 +118,9 @@ async function begin(u, b) {
   const result = await b.request('/api/auth/login', { email: u.email, password: PASSWORD });
   assert.equal(result.status, 200, JSON.stringify(result.data));
   assert.equal(result.data.mfaRequired, true);
+  assert.deepEqual(Object.keys(result.data).sort(), ['expiresAt', 'mfaRequired']);
   assert.equal(deliveries.length, before + 1);
-  assert.equal(deliveries.at(-1).to, 'L.monhorgil2007@gmail.com');
+  assert.equal(deliveries.at(-1).to, process.env.ADMIN_OTP_RECIPIENT);
   return { result, otp: deliveries.at(-1).otp };
 }
 async function verified(u = null, b = browser()) {
@@ -154,6 +156,33 @@ test('password + browser-bound OTP issues a 24h admin session and hides secrets'
   const claims = jwt.decode(b.cookies.get('wa_token'));
   assert.equal(claims.adminDeviceId, device.id);
   assert.ok(claims.exp * 1000 <= +device.expiresAt);
+});
+
+test('retrying a pending admin challenge does not disclose its delivery address', async () => {
+  const u = await user(); const b = browser();
+  const { result: first } = await begin(u, b);
+  const count = deliveries.length;
+  const retry = await b.request('/api/auth/login', { email: u.email, password: PASSWORD });
+  assert.equal(retry.status, 200);
+  assert.deepEqual(retry.data, first.data);
+  assert.equal(deliveries.length, count);
+  assert.equal(JSON.stringify(retry.data).includes(process.env.ADMIN_OTP_RECIPIENT), false);
+});
+
+test('password recovery hides admin routing for admin, student and nonexistent accounts', async () => {
+  const admin = await user(); const student = await user('STUDENT');
+  for (const [email, recipient] of [
+    [admin.email, process.env.ADMIN_OTP_RECIPIENT],
+    [student.email, student.email],
+    [`missing-${crypto.randomUUID()}@test.invalid`, null],
+  ]) {
+    const count = deliveries.length;
+    const response = await browser().request('/api/auth/forgot-password', { email });
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.data, { ok: true });
+    assert.equal(deliveries.length, count + (recipient ? 1 : 0));
+    if (recipient) assert.equal(deliveries.at(-1).to, recipient);
+  }
 });
 
 test('same browser reuses fixed trust; another browser and a legacy account timestamp cannot bypass OTP', async () => {
@@ -236,7 +265,7 @@ test('admin password recovery goes to the fixed mailbox, consumes the code once 
   const recovery = browser();
   assert.equal((await recovery.request('/api/auth/forgot-password', { email: u.email })).status, 200);
   const mail = deliveries.at(-1);
-  assert.equal(mail.to, 'L.monhorgil2007@gmail.com');
+  assert.equal(mail.to, process.env.ADMIN_OTP_RECIPIENT);
   assert.equal(mail.purpose, 'reset');
   const payload = { email: u.email, otp: mail.otp, newPassword: PASSWORD + '-reset' };
   const results = await Promise.all([recovery, browser()].map((client) => client.request('/api/auth/reset-password', payload)));

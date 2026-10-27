@@ -2,7 +2,7 @@
 
 ## Implemented in the application
 
-- Admin login requires a password and a single-use, **10-minute** email code sent only to `L.monhorgil2007@gmail.com`. A successful verification remembers that browser profile for a fixed **24 hours**, without extending the window on subsequent logins. Another browser needs its own code. Five incorrect entries invalidate a challenge; sending is limited in the database to one per minute and five per 15 minutes per account. Expired codes can be replaced without waiting 24 hours.
+- Admin login requires a password and a single-use, **10-minute** email code sent only to the backend's `ADMIN_OTP_RECIPIENT`. Set that private address only in the hosting environment; it is not returned in MFA/recovery responses or embedded in frontend copy. A successful verification remembers that browser profile for a fixed **24 hours**, without extending the window on subsequent logins. Another browser needs its own code. Five incorrect entries invalidate a challenge; sending is limited in the database to one per minute and five per 15 minutes per account. Expired codes can be replaced without waiting 24 hours.
 - Challenges and remembered browsers use random 256-bit HttpOnly, SameSite=Strict cookies, with Secure and the host-only `__Host-` prefix in production. Only token hashes and keyed OTP digests reach the database. A challenge row lock prevents OTP replay; account row locks serialize send limits and credential revocation.
 - Admin sessions and JWT expiry cannot exceed the remembered browser's expiry. Every admin request checks the device record, current role, account activity and credentials. Password change/reset, role changes and deactivation revoke trust, pending challenges and sessions. Legacy account-wide MFA timestamps and old admin JWTs do not bypass the new flow.
 - Production refuses to start with missing, reused or example `OTP_HASH_SECRET`, `JWT_SECRET`, `CSRF_SECRET` values, or without explicit HTTPS `CORS_ORIGIN` entries.
@@ -31,7 +31,7 @@ The additive SQL at `server/prisma/migrations/20261025000000_security_hardening/
 ## Required production operations
 
 1. Set unique, randomly generated production values for `JWT_SECRET`, `CSRF_SECRET`, and `OTP_HASH_SECRET`; never reuse the examples or commit live values.
-2. Configure a working transactional email provider. Without it, admin login fails closed after password verification.
+2. Set `ADMIN_OTP_RECIPIENT` to the approved owner's mailbox and configure a working transactional email provider. Missing/invalid recipient configuration prevents production startup; failed delivery blocks admin login. Never use a client/VITE environment variable for the recipient.
 3. Remove any previously created demo accounts and rotate any admin passwords that may have been used outside production.
 4. Configure Redis for rate limits if deploying more than one API process/instance.
 5. Verify Neon backups/PITR, retention, and restore access in the provider dashboard; perform a restore drill before relying on it. App code cannot prove provider backup state.
